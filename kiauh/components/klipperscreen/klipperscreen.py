@@ -820,7 +820,8 @@ def install_klipperscreen() -> None:
             except Exception:  # pragma: no cover - already logged inside helper
                 autostart_result = None
 
-        manage_systemd_service = True
+        init_system = detect_init_system()
+        manage_systemd_service = init_system is InitSystem.SYSTEMD
         if autostart_result is not None and autostart_result.uses_user_autostart:
             manage_systemd_service = False
 

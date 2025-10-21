@@ -8,13 +8,20 @@
 # ======================================================================= #
 from pathlib import Path
 
-from utils.sys_utils import get_service_directory
+from utils.sys_utils import InitSystem, detect_init_system, get_service_directory
 
 # repo
 KLIPPERSCREEN_REPO = "https://github.com/KlipperScreen/KlipperScreen.git"
 
 # names
-KLIPPERSCREEN_SERVICE_NAME = "KlipperScreen.service"
+def _resolve_service_name() -> str:
+    init_system = detect_init_system()
+    if init_system == InitSystem.OPENRC:
+        return "KlipperScreen"
+    return "KlipperScreen.service"
+
+
+KLIPPERSCREEN_SERVICE_NAME = _resolve_service_name()
 KLIPPERSCREEN_UPDATER_SECTION_NAME = "update_manager KlipperScreen"
 KLIPPERSCREEN_LOG_NAME = "KlipperScreen.log"
 

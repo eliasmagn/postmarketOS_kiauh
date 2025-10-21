@@ -10,6 +10,7 @@
 - [x] Add Phosh/Plasma Wayland presets to the KlipperScreen installer and generate launchers during installation.
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
+- [x] Install and register a native OpenRC KlipperScreen service so standalone console installs boot directly into the UI.
 - [x] Gate Moonraker update-manager's `managed_services` stanza behind the selected KlipperScreen autostart backend.
 - [x] Document postmarketOS-specific prerequisites for the init-service abstraction and Wayland presets in the README.
 - [x] Defer the Wayland preset prompt until after the backend choice so X11 installs no longer see the question prematurely.
