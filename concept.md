@@ -9,3 +9,4 @@ The project focuses on:
 - Maintaining documentation that highlights platform-specific nuances for end users.
 - Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents so postmarketOS users can reproduce the same setup flow.
 - Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.
+- Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, etc.) get a usable KlipperScreen session without manual environment plumbing.

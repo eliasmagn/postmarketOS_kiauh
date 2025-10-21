@@ -121,6 +121,44 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 `rc-update`, so manual maintenance commands follow the native tools instead of
 `systemctl`.
 
+### 📱 Wayland mobile-shell presets
+
+During KlipperScreen installation you can now pick a Wayland launcher preset
+that mirrors the upstream Phosh and Plasma Mobile recommendations. KIAUH writes
+the following artefacts after cloning the KlipperScreen repository:
+
+- A shell wrapper in `~/.local/bin/` that exports the compositor-friendly
+  environment variables (Qt, GTK, SDL, etc.) before delegating to
+  `KlipperScreen-start.sh`.
+- A `.desktop` entry in `~/.local/share/applications/` so Phosh/Plasma launchers
+  can spawn KlipperScreen with the expected Wayland flags.
+- Either a `systemd --user` service or an OpenRC user service stub, depending on
+  the host init system, pointing to the wrapper.
+
+Systemd users can enable the service immediately:
+
+```sh
+systemctl --user enable --now klipperscreen-phosh.service
+```
+
+OpenRC users need to symlink the generated service script into their preferred
+runlevel (for example `~/.config/openrc/runlevels/default/`).
+
+The launcher presets are additive—the existing system instance managed by KIAUH
+remains untouched—so you can try the Wayland session without disrupting the
+original install.
+
+### 🖥️ Auto-generated KlipperScreen.conf defaults
+
+If `wlr-randr` or `weston-info` is present, KIAUH now detects the built-in
+display during installation. The detected width, height, and rotation hint are
+written to `~/printer_data/config/KlipperScreen.conf` (or appended if the file
+already exists). Adjust the values if your compositor applies additional
+scaling, or if you rotate the panel within Phosh/Plasma settings.
+
+Touch rotation is still handled by the compositor—follow the upstream
+troubleshooting guide if pointer coordinates do not align after rotating.
+
 <h2 align="center">📦 Debian ➜ Alpine package map</h2>
 
 To keep the postmarketOS port predictable, every Debian package requested by the
