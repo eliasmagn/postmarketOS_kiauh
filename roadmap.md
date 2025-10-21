@@ -10,6 +10,7 @@
 - ✅ Publish postmarketOS-specific prerequisites covering SSH access, UI packages, and seat management so the new presets work on phones and tablets.
 - ✅ Replace KlipperScreen's upstream installer with an apk-aware wrapper so X11 and Wayland dependencies resolve correctly on postmarketOS.
 - ✅ Stage the Wayland preset helper after the backend selection so X11-first installs progress without unrelated prompts.
+- ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 

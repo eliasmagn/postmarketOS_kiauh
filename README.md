@@ -176,6 +176,19 @@ The launcher presets are additive—the existing system instance managed by KIAU
 remains untouched—so you can try the Wayland session without disrupting the
 original install.
 
+### 🧹 Minimal KlipperScreen footprint
+
+- The KlipperScreen installer now defaults to the packages strictly required to
+  run the UI with touch input. Optional fonts and media backends are skipped
+  unless you explicitly opt in when KIAUH asks before launching the upstream
+  installer.
+- Headless or scripted runs can preseed the decision by exporting
+  `KIAUH_KS_INSTALL_EXTRAS=1` (install extras) or `KIAUH_KS_INSTALL_EXTRAS=0`
+  (keep the minimal set) before invoking `KlipperScreen-install.sh`.
+- When the extras are skipped, the downstream log highlights that the install
+  kept the dependency footprint minimal, so you can verify that the additional
+  packages were not pulled in.
+
 ### 🪟 X11 remains a first-class option on postmarketOS
 
 - When the helper detects an Alpine/postmarketOS environment it now swaps the upstream KlipperScreen installer with an apk-aware wrapper before execution. The wrapper mirrors the original prompts but resolves dependency installation through `apk` (or `doas` when `sudo` is absent) so X11 packages install cleanly.

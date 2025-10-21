@@ -8,7 +8,7 @@ XSERVER="xinit xinput x11-xserver-utils xserver-xorg-input-evdev xserver-xorg-in
 CAGE="cage seatd xwayland"
 PYGOBJECT="libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0"
 MISC="librsvg2-common libopenjp2-7 libdbus-glib-1-dev autoconf python3-venv"
-OPTIONAL="fonts-nanum fonts-ipafont libmpv-dev"
+OPTIONAL_EXTRAS="fonts-nanum fonts-ipafont libmpv-dev"
 
 Red='\033[0;31m'
 Green='\033[0;32m'
@@ -60,7 +60,7 @@ if [ "$PKG_MANAGER" = "apk" ]; then
     CAGE="cage seatd xwayland"
     PYGOBJECT="gobject-introspection-dev gcc cairo-dev pkgconf python3-dev gtk+3.0-dev"
     MISC="librsvg openjpeg dbus-glib-dev autoconf py3-virtualenv"
-    OPTIONAL="mpv-dev"
+    OPTIONAL_EXTRAS="mpv-dev"
 fi
 
 translate_apk_package() {
@@ -184,6 +184,38 @@ pkg_install_list() {
     pkg_install "${packages[@]}"
 }
 
+install_optional_extras() {
+    if [ -z "$OPTIONAL_EXTRAS" ]; then
+        return 0
+    fi
+
+    local decision="${KIAUH_KS_INSTALL_EXTRAS:-}"
+    local install_choice
+    local normalized
+
+    if [ -n "$decision" ]; then
+        install_choice="$decision"
+    else
+        echo_text "Optional extras provide fonts and media backends that are not required for a touch-ready KlipperScreen."
+        echo "Press enter for default (No)"
+        read -r -e -p "Install optional extras? [y/N]" install_choice
+    fi
+
+    normalized=$(printf '%s' "$install_choice" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$normalized" =~ ^(y|yes|1)$ ]]; then
+        echo_text "Installing optional KlipperScreen extras"
+        if pkg_install_list "$OPTIONAL_EXTRAS"; then
+            echo_ok "Installed optional extras"
+        else
+            echo_error "Installation of optional extras failed ($OPTIONAL_EXTRAS)"
+            exit 1
+        fi
+    else
+        echo_text "Skipping optional extras to keep the installation minimal"
+    fi
+}
+
 ensure_group() {
     local group="$1"
     if command_exists groupadd; then
@@ -279,7 +311,6 @@ install_packages()
     fi
 
     echo_text "Installing KlipperScreen dependencies"
-    pkg_install_list "$OPTIONAL"
 
     if pkg_install_list "$PYGOBJECT"; then
         echo_ok "Installed PyGobject dependencies"
@@ -293,6 +324,8 @@ install_packages()
         echo_error "Installation of Misc packages failed ($MISC)"
         exit 1
     fi
+
+    install_optional_extras
 }
 
 check_requirements()

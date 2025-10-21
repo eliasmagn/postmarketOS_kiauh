@@ -781,6 +781,15 @@ def install_klipperscreen() -> None:
     env = os.environ.copy()
     env["KIAUH_BACKEND_TRACK_FILE"] = backend_track_path.as_posix()
 
+    extras_choice = get_confirm(
+        "Install optional KlipperScreen extras (fonts and media helpers)?",
+        default_choice=False,
+        allow_go_back=True,
+    )
+    if extras_choice is None:
+        return
+    env["KIAUH_KS_INSTALL_EXTRAS"] = "1" if extras_choice else "0"
+
     try:
         run(
             KLIPPERSCREEN_INSTALL_SCRIPT.as_posix(),
