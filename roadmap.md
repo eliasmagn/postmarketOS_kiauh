@@ -2,6 +2,7 @@
 
 ## Near Term
 - Validate apk-based installations on multiple postmarketOS devices and document any device-specific steps.
+- ✅ Read `/etc/os-release` during package manager detection so postmarketOS devices reliably select `apk` even if legacy `apt-get` wrappers are present.
 - ✅ Normalize cross-compilation toolchain package names for Alpine/postmarketOS so apk installs succeed on stock mirrors.
 - ✅ Expand the package translation table as additional dependencies are encountered during component installs; track follow-up actions for packages without Alpine ports (`packagekit`, `libcamera-apps-lite`).
 - ✅ Detect the active init system and wire service management to both systemd and OpenRC so installers and maintenance flows stay in sync.

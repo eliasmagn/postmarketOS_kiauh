@@ -77,12 +77,43 @@ class PackageManager(Enum):
     UNKNOWN = "unknown"
 
 
+def _read_os_release() -> dict[str, str]:
+    data: dict[str, str] = {}
+    os_release = Path("/etc/os-release")
+    if not os_release.exists():
+        return data
+
+    for line in os_release.read_text().splitlines():
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        data[key.strip()] = value.strip().strip('"')
+    return data
+
+
+def _is_alpine_like(os_release: dict[str, str]) -> bool:
+    identifiers = {os_release.get("ID", "").lower()}
+    identifiers.update(
+        part.strip().lower()
+        for part in os_release.get("ID_LIKE", "").split()
+        if part
+    )
+    return any(identifier in {"alpine", "postmarketos"} for identifier in identifiers)
+
+
 @lru_cache(maxsize=1)
 def get_package_manager() -> PackageManager:
+    os_release = _read_os_release()
+
+    if _is_alpine_like(os_release) and shutil.which("apk"):
+        return PackageManager.APK
+
     if shutil.which("apt-get") and shutil.which("dpkg-query"):
         return PackageManager.APT
+
     if shutil.which("apk"):
         return PackageManager.APK
+
     return PackageManager.UNKNOWN
 
 

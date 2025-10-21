@@ -1,6 +1,7 @@
 # Checklist
 
 - [x] Detect and support both `apt` and `apk` package managers inside the helper utilities.
+- [x] Guard package-manager detection with `/etc/os-release` so apk-capable systems ignore stray `apt-get` compatibility shims.
 - [x] Translate Debian-specific dependency names to their Alpine/postmarketOS equivalents during installation.
 - [x] Align cross-compilation toolchain translations so `apk` pulls `binutils-arm-none-eabi`, `gcc-arm-none-eabi`, `binutils-avr`, and `gcc-avr` without errors.
 - [x] Refresh documentation to describe the new package manager support.
