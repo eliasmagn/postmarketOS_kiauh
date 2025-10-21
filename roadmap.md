@@ -13,6 +13,7 @@
 - ✅ Ship a native OpenRC KlipperScreen service so standalone installs boot directly into the UI without systemd dependencies.
 - ✅ Apply Xwrapper console permissions during apk installs so OpenRC-managed KlipperScreen services can start Xorg successfully.
 - ✅ Inject a default `KS_XCLIENT` fallback into `KlipperScreen-start.sh` so post-install services and manual runs always launch the UI.
+- ✅ Add a panorama orientation prompt that rewrites KlipperScreen defaults and installs an X11 helper so landscape-first panels initialise with horizontal resolutions.
 - ✅ Stage the Wayland preset helper after the backend selection so X11-first installs progress without unrelated prompts.
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.

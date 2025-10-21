@@ -10,6 +10,7 @@
 - [x] Add Phosh/Plasma Wayland presets to the KlipperScreen installer and generate launchers during installation.
 - [x] Extend the Wayland preset helper with an Sxmo wlroots profile so msm8953 reference images launch KlipperScreen reliably.
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
+- [x] Add a panorama-mode prompt that rewrites KlipperScreen display defaults and seeds an X11 rotation helper during install.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
 - [x] Install and register a native OpenRC KlipperScreen service so standalone console installs boot directly into the UI.
 - [x] Ensure apk-based KlipperScreen X11 installs write Xwrapper permissions so OpenRC services can spawn Xorg without logind.

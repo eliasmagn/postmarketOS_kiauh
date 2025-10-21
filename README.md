@@ -258,6 +258,19 @@ scaling, or if you rotate the panel within Phosh/Plasma settings.
 Touch rotation is still handled by the compositor—follow the upstream
 troubleshooting guide if pointer coordinates do not align after rotating.
 
+### 🏞️ Panorama orientation helper
+
+- During installation KIAUH now asks whether KlipperScreen should run in a
+  panorama (horizontal) layout. Opting in rewrites the width/height defaults in
+  `KlipperScreen.conf`, ensuring wide touch panels advertise the correct
+  horizontal resolution to the UI.
+- The same prompt seeds an executable helper under
+  `~/.config/klipperscreen/panorama-xrandr.sh`. When the X11 backend is active
+  the patched launcher executes this helper before starting KlipperScreen so the
+  selected output is configured with the requested mode and rotation.
+- You can rerun the KlipperScreen installer at any time to tweak the panorama
+  resolution or disable the helper by removing the script.
+
 <h2 align="center">📦 Debian ➜ Alpine package map</h2>
 
 To keep the postmarketOS port predictable, every Debian package requested by the
