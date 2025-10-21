@@ -210,6 +210,62 @@ def _sync_installer_script_with_asset() -> None:
         )
 
 
+_START_SCRIPT_SENTINEL = "# KIAUH fallback: ensure default client selection"
+
+
+def _ensure_start_script_client_fallback() -> None:
+    """Make the upstream launcher default to KlipperScreen when KS_XCLIENT is unset."""
+
+    script_path = KLIPPERSCREEN_DIR.joinpath("scripts/KlipperScreen-start.sh")
+    if not script_path.exists():
+        return
+
+    try:
+        content = script_path.read_text(encoding="utf-8")
+    except OSError:
+        return
+
+    if _START_SCRIPT_SENTINEL in content:
+        return
+
+    needle = "SCRIPTPATH=$(dirname $(realpath $0))"
+    if needle not in content:
+        Logger.print_warn(
+            "Unable to inject KlipperScreen fallback into KlipperScreen-start.sh "
+            "because the expected anchor was not found."
+        )
+        return
+
+    fallback_block = dedent(
+        """
+# KIAUH fallback: ensure default client selection
+KS_BASEDIR="${SCRIPTPATH%/scripts}"
+if [ -z "${KS_DIR:-}" ]; then
+    KS_DIR="$KS_BASEDIR"
+fi
+if [ -z "${KS_ENV:-}" ]; then
+    KS_ENV="${HOME}/.KlipperScreen-env"
+fi
+if [ -z "${KS_XCLIENT:-}" ]; then
+    KS_XCLIENT="${KS_ENV}/bin/python ${KS_DIR}/screen.py"
+fi
+        """
+    ).rstrip()
+
+    updated = content.replace(needle, f"{needle}\n{fallback_block}", 1)
+    try:
+        script_path.write_text(updated, encoding="utf-8")
+        Logger.print_info(
+            "Injected default KS_XCLIENT fallback into KlipperScreen-start.sh so "
+            "manual launches use screen.py even when services skip environment "
+            "exports."
+        )
+    except OSError:
+        Logger.print_warn(
+            "Failed to update KlipperScreen-start.sh with KS_XCLIENT fallback."
+        )
+
+
 def prompt_wayland_preset() -> Optional[WaylandPreset]:
     Logger.print_info(
         "KlipperScreen now ships Wayland session presets. Select the one that matches your "
@@ -803,6 +859,7 @@ def install_klipperscreen() -> None:
 
     git_clone_wrapper(KLIPPERSCREEN_REPO, KLIPPERSCREEN_DIR)
     _sync_installer_script_with_asset()
+    _ensure_start_script_client_fallback()
 
     backend_track_path = KLIPPERSCREEN_INSTALL_SCRIPT.parent.joinpath(
         BACKEND_TRACK_FILENAME

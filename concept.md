@@ -26,6 +26,7 @@ The project focuses on:
 - Adapting KlipperScreen autostart to the surrounding shell—desktop environments receive `.desktop` launchers while console-only OpenRC systems get login hooks that wait for Moonraker before spawning the UI.
 - Provisioning a first-party OpenRC service for KlipperScreen's standalone flow so console boots spawn the UI without relying on systemd units.
 - Writing console-safe Xwrapper policies on apk-based hosts so the OpenRC KlipperScreen service can bring up Xorg without elogind.
+- Hardening upstream launchers with default `KS_XCLIENT` fallbacks so ad-hoc invocations still boot the touch UI even when init systems skip the expected environment exports.
 - Defaulting installers to the minimum viable dependency footprint and offering optional extras as explicit opt-ins so mobile deployments stay lightweight.
 
 As the scope expands beyond SBCs, we treat touch-first UX goals—gesture-ready launchers, portrait rotation defaults, and low-power service policies—as first-class citizens so postmarketOS phones and tablets can host Klipper without desktop-era compromises.
