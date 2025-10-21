@@ -138,6 +138,8 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 `rc-update`, so manual maintenance commands follow the native tools instead of
 `systemctl`.
 
+- When NetworkManager is installed during the KlipperScreen flow on systemd, the helper now prints a reboot reminder instead of forcing an immediate restart so unattended runs can finish cleanly before you reboot manually.
+
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset

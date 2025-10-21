@@ -14,6 +14,7 @@
 - [x] Document postmarketOS-specific prerequisites for the init-service abstraction and Wayland presets in the README.
 - [x] Defer the Wayland preset prompt until after the backend choice so X11 installs no longer see the question prematurely.
 - [x] Default the KlipperScreen installer to the minimal dependency set and gate optional extras behind an explicit opt-in.
+- [x] Replace KlipperScreen's NetworkManager install reboot with a manual reminder so unattended runs exit cleanly.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.

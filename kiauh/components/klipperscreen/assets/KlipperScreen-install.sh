@@ -566,7 +566,7 @@ EOF_NM
             $PRIV_CMD systemctl enable NetworkManager
             $PRIV_CMD systemctl -q --no-block start NetworkManager
             sync
-            systemctl reboot
+            echo_text "NetworkManager is now enabled and running. Please reboot manually to ensure the new network stack is fully active."
         elif [ "$INIT_SYSTEM" = "openrc" ]; then
             if command_exists rc-update; then
                 $PRIV_CMD rc-update del dhcpcd default 2> /dev/null || true

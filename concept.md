@@ -7,6 +7,7 @@ The project focuses on:
 - Capturing handset and tablet ergonomics—navigation, scaling, and orientation heuristics—so the mobile UX feels native on postmarketOS touch shells.
 - Automating environment preparation for Klipper, Moonraker, and companion tools.
 - Providing a resilient installation experience across multiple Linux families.
+- Replacing disruptive post-install reboots with clear guidance so scripted deployments can finish gracefully.
 - Maintaining documentation that highlights platform-specific nuances for end users.
 - Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents—cross-compilation toolchains included—so postmarketOS users can reproduce the same setup flow without manual package hunting.
 - Replacing upstream-only installers with apk-aware shims when necessary so features like KlipperScreen's X11 session remain first-class citizens alongside the newer Wayland presets.

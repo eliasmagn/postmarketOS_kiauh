@@ -11,6 +11,7 @@
 - ✅ Replace KlipperScreen's upstream installer with an apk-aware wrapper so X11 and Wayland dependencies resolve correctly on postmarketOS.
 - ✅ Stage the Wayland preset helper after the backend selection so X11-first installs progress without unrelated prompts.
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
+- ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 
