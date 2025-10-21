@@ -24,6 +24,7 @@ from core.menus.base_menu import BaseMenu
 from core.services.message_service import Message
 from core.settings.kiauh_settings import KiauhSettings, WebUiSettings
 from core.types.color import Color
+from utils.firewall_utils import configure_nftables
 from utils.sys_utils import cmd_sysctl_service, get_ipv4_addr
 
 
@@ -84,6 +85,15 @@ class ClientInstallMenu(BaseMenu):
         Logger.print_ok("Port configuration saved!")
 
         cmd_sysctl_service("nginx", "start")
+
+        configure_nftables(
+            self.client.display_name,
+            [new_port],
+            context=(
+                f"Ensure nftables allows inbound connections to {self.client.display_name} "
+                "on the reconfigured port."
+            ),
+        )
 
         # noinspection HttpUrlsUsage
         message = Message(

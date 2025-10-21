@@ -49,6 +49,7 @@ from core.services.message_service import Message, MessageService
 from core.settings.kiauh_settings import KiauhSettings
 from core.types.color import Color
 from utils.common import check_install_dependencies
+from utils.firewall_utils import configure_nftables
 from utils.fs_utils import check_file_exist, run_remove_routines
 from utils.git_utils import git_clone_wrapper, git_pull_wrapper
 from utils.input_utils import (
@@ -278,8 +279,22 @@ class MoonrakerSetupService:
 
         self.misvc.load_instances()
         new_instances = [
-            self.misvc.get_instance_by_suffix(i.suffix) for i in new_instances
+            inst
+            for inst in (
+                self.misvc.get_instance_by_suffix(instance.suffix)
+                for instance in new_instances
+            )
+            if inst is not None
         ]
+
+        configure_nftables(
+            "Moonraker",
+            [instance.port for instance in new_instances if instance.port],
+            context=(
+                "Moonraker's API must be reachable for web UIs and remote helpers. "
+                "Allow the ports below if nftables is active."
+            ),
+        )
 
         ip: str = get_ipv4_addr()
         # noinspection HttpUrlsUsage

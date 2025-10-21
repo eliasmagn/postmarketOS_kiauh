@@ -42,6 +42,7 @@ from core.settings.kiauh_settings import KiauhSettings
 from core.types.color import Color
 from utils.common import check_install_dependencies
 from utils.config_utils import add_config_section
+from utils.firewall_utils import configure_nftables
 from utils.fs_utils import unzip
 from utils.input_utils import get_confirm
 from utils.instance_utils import get_instances
@@ -129,6 +130,15 @@ def install_client(
         if kl_instances:
             symlink_webui_nginx_log(client, kl_instances)
         cmd_sysctl_service("nginx", "restart")
+
+        configure_nftables(
+            client.display_name,
+            [port],
+            context=(
+                f"{client.display_name} is served by NGINX. Allow the selected "
+                "listen port if nftables is enabled."
+            ),
+        )
 
     except Exception as e:
         Logger.print_error(e)
