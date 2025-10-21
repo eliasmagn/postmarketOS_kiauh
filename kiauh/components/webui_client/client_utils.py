@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, run
 from typing import List, get_args
@@ -314,26 +315,30 @@ def generate_nginx_cfg_from_template(name: str, template_src: Path, **kwargs) ->
     :param template_src: the path to the template file
     :return: None
     """
-    tmp = Path.home().joinpath(f"{name}.tmp")
-    shutil.copy(template_src, tmp)
-    with open(tmp, "r+") as f:
-        content = f.read()
+    content = template_src.read_text(encoding="utf-8")
 
-        for key, value in kwargs.items():
-            content = content.replace(f"%{key}%", str(value))
+    for key, value in kwargs.items():
+        content = content.replace(f"%{key}%", str(value))
 
-        f.seek(0)
-        f.write(content)
-        f.truncate()
-
+    tmp = None
     target = NGINX_SITES_AVAILABLE.joinpath(name)
+
     try:
+        with tempfile.NamedTemporaryFile(
+            prefix=f"{name}-", suffix=".tmp", delete=False, mode="w", encoding="utf-8"
+        ) as tmp_file:
+            tmp_file.write(content)
+            tmp = Path(tmp_file.name)
+
         command = ["sudo", "mv", tmp, target]
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as e:
         log = f"Unable to create '{target}': {e.stderr.decode()}"
         Logger.print_error(log)
         raise
+    finally:
+        if tmp is not None:
+            tmp.unlink(missing_ok=True)
 
 
 def create_nginx_cfg(
