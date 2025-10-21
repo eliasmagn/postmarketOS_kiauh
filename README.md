@@ -154,6 +154,12 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - The dialog lets you keep the listener open to the world, restrict it to the automatically detected local subnets, or enter a custom comma-separated list of CIDR ranges/hosts. IPv4 and IPv6 prefixes are supported.
 - Reconfiguring a web UI port through the installation menu re-runs the firewall helper so the nftables rule stays in sync without manual edits. You can always skip the automation and adjust rules manually if you prefer.
 
+### 🔐 WireGuard provisioning
+
+- The Installation menu now exposes a `WireGuard` entry that installs `wireguard-tools`, walks you through generating or importing keys, and writes `/etc/wireguard/<interface>.conf` with the peer settings you provide.
+- Existing configurations are backed up with a timestamped `.bak` before the new file is written, permissions are tightened to `600`, and KIAUH enables the matching `wg-quick` service for systemd and OpenRC hosts when possible.
+- The helper prints the freshly generated public key so you can register the device on your VPN gateway, making it easier to pair WireGuard with the nftables automation when remote access is required.
+
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
