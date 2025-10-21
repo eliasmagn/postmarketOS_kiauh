@@ -7,3 +7,4 @@ The project focuses on:
 - Automating environment preparation for Klipper, Moonraker, and companion tools.
 - Providing a resilient installation experience across multiple Linux families.
 - Maintaining documentation that highlights platform-specific nuances for end users.
+- Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents so postmarketOS users can reproduce the same setup flow.

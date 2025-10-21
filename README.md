@@ -111,6 +111,123 @@ cd ~ && git clone https://github.com/dw-0/kiauh.git
   number into the "Perform action"
   prompt and confirm by hitting ENTER.
 
+<h2 align="center">📦 Debian ➜ Alpine package map</h2>
+
+To keep the postmarketOS port predictable, every Debian package requested by the
+component installers under `kiauh/components/**` is mapped to the appropriate
+Alpine `apk` name (where possible). The tables below list the exact inventory.
+Entries marked as "Not available" are skipped at runtime and emit a warning so
+that you can plan any manual workarounds.
+
+#### Global prerequisites
+
+| Debian package        | Alpine package(s) |
+|-----------------------|-------------------|
+| git                   | git               |
+| wget                  | wget              |
+| curl                  | curl              |
+| unzip                 | unzip             |
+| dfu-util              | dfu-util          |
+| python3-virtualenv    | py3-virtualenv    |
+
+#### Klipper host installer (`scripts/install-ubuntu-22.04.sh`)
+
+| Debian package             | Alpine package(s)         |
+|----------------------------|---------------------------|
+| virtualenv                 | py3-virtualenv            |
+| python3-dev                | python3-dev               |
+| libffi-dev                 | libffi-dev                |
+| build-essential            | build-base                |
+| libncurses-dev             | ncurses-dev               |
+| libusb-dev                 | libusb-dev                |
+| avrdude                    | avrdude                   |
+| gcc-avr                    | avr-gcc                   |
+| binutils-avr               | avr-binutils              |
+| avr-libc                   | avr-libc                  |
+| stm32flash                 | stm32flash                |
+| libnewlib-arm-none-eabi    | newlib-arm-none-eabi      |
+| gcc-arm-none-eabi          | arm-none-eabi-gcc         |
+| binutils-arm-none-eabi     | arm-none-eabi-binutils    |
+| libusb-1.0                 | libusb                    |
+
+#### Klipper input shaper extras
+
+| Debian package        | Alpine package(s) |
+|-----------------------|-------------------|
+| python3-numpy         | py3-numpy         |
+| python3-matplotlib    | py3-matplotlib    |
+| libatlas-base-dev     | atlas-dev         |
+| libopenblas-dev       | openblas-dev      |
+
+#### Moonraker system dependencies (`scripts/system-dependencies.json`)
+
+| Debian package        | Alpine package(s)        |
+|-----------------------|--------------------------|
+| python3-virtualenv    | py3-virtualenv           |
+| python3-dev           | python3-dev              |
+| libopenjp2-7          | openjpeg                 |
+| libsodium-dev         | libsodium-dev            |
+| zlib1g-dev            | zlib-dev                 |
+| libjpeg-dev           | libjpeg-turbo-dev        |
+| packagekit            | Not available on Alpine* |
+| wireless-tools        | wireless-tools           |
+| iw                    | iw                       |
+| python3-libcamera     | py3-libcamera            |
+| curl                  | curl                     |
+| build-essential       | build-base               |
+
+#### Crowsnest core installer (`tools/libs/pkglist-generic.sh`)
+
+| Debian package     | Alpine package(s)           |
+|--------------------|-----------------------------|
+| git                | git                         |
+| crudini            | crudini                     |
+| bsdutils           | util-linux                  |
+| findutils          | findutils                   |
+| v4l-utils          | v4l-utils                   |
+| curl               | curl                        |
+| build-essential    | build-base                  |
+| make               | make                        |
+| libevent-dev       | libevent, libevent-dev      |
+| libjpeg-dev        | libjpeg-turbo-dev           |
+| libbsd-dev         | libbsd-dev                  |
+| pkg-config         | pkgconf                     |
+
+#### Crowsnest camera-streamer extras (`tools/libs/pkglist-rpi.sh`)
+
+| Debian package        | Alpine package(s)           |
+|-----------------------|-----------------------------|
+| cmake                 | cmake                       |
+| libavformat-dev       | ffmpeg-dev                  |
+| libavutil-dev         | ffmpeg-dev                  |
+| libavcodec-dev        | ffmpeg-dev                  |
+| libcamera-dev         | libcamera, libcamera-dev    |
+| libcamera-apps-lite   | Not available on Alpine*    |
+| liblivemedia-dev      | live555, live555-dev        |
+| pkg-config            | pkgconf                     |
+| xxd                   | xxd                         |
+| build-essential       | build-base                  |
+| libssl-dev            | openssl-dev                 |
+
+#### Firmware build helpers
+
+| Debian package  | Alpine package(s) |
+|-----------------|-------------------|
+| build-essential | build-base        |
+| dpkg-dev        | dpkg              |
+| make            | make              |
+
+#### Web UI clients
+
+| Debian package | Alpine package(s) |
+|----------------|-------------------|
+| nginx          | nginx             |
+
+*`packagekit` powers Moonraker's PackageKit integration on Debian systems but is
+not shipped for Alpine/postmarketOS. `libcamera-apps-lite` provides optional
+camera utilities that are also unavailable on Alpine. The helper warns when
+these packages are skipped so you can review downstream tooling requirements.
+
 <hr>
 
 <h2 align="center">❗ Notes ❗</h2>
