@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import re
 import shutil
-import tempfile
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, run
 from typing import List, get_args
@@ -274,6 +273,80 @@ def get_download_url(base_url: str, client: BaseWebClient) -> str:
 #################################################
 
 
+def _nginx_has_sites_include() -> bool:
+    """Return True when an nginx config already includes sites-enabled."""
+
+    include_patterns = (
+        f"include {NGINX_SITES_ENABLED.as_posix()}/*;",
+        f"include {NGINX_SITES_ENABLED.as_posix()}/*.conf;",
+    )
+
+    candidate_files = [Path("/etc/nginx/nginx.conf")]
+    if NGINX_CONFD.exists():
+        candidate_files.extend(sorted(NGINX_CONFD.glob("*.conf")))
+
+    for candidate in candidate_files:
+        try:
+            content = candidate.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        if any(pattern in content for pattern in include_patterns):
+            return True
+
+    return False
+
+
+def _ensure_nginx_sites_include() -> None:
+    """Ensure nginx loads configs from /etc/nginx/sites-enabled."""
+
+    if _nginx_has_sites_include():
+        return
+
+    include_file = NGINX_CONFD.joinpath("kiauh-sites.conf")
+    content = f"include {NGINX_SITES_ENABLED.as_posix()}/*;\n"
+
+    try:
+        Logger.print_status(
+            f"Linking {NGINX_SITES_ENABLED} into nginx via {include_file.name} ..."
+        )
+        command = ["sudo", "tee", str(include_file)]
+        run(
+            command,
+            input=content.encode("utf-8"),
+            stdout=PIPE,
+            stderr=PIPE,
+            check=True,
+        )
+        Logger.print_ok(
+            f"Added nginx include for {NGINX_SITES_ENABLED} via {include_file.name}."
+        )
+    except CalledProcessError as e:
+        log = f"Unable to create '{include_file}': {e.stderr.decode()}"
+        Logger.print_error(log)
+        raise
+
+
+def ensure_nginx_site_layout() -> None:
+    """Ensure Debian-style nginx site directories exist and are loaded."""
+
+    try:
+        for directory in (NGINX_SITES_AVAILABLE, NGINX_SITES_ENABLED):
+            if directory.exists():
+                continue
+
+            Logger.print_status(f"Creating missing nginx directory {directory} ...")
+            command = ["sudo", "install", "-d", "-m", "755", str(directory)]
+            run(command, stderr=PIPE, check=True)
+            Logger.print_ok(f"Directory {directory} created.")
+    except CalledProcessError as e:
+        log = f"Unable to create nginx directory: {e.stderr.decode()}"
+        Logger.print_error(log)
+        raise
+
+    _ensure_nginx_sites_include()
+
+
 def copy_upstream_nginx_cfg() -> None:
     """
     Creates an upstream.conf in the detected NGINX configuration directory.
@@ -320,25 +393,21 @@ def generate_nginx_cfg_from_template(name: str, template_src: Path, **kwargs) ->
     for key, value in kwargs.items():
         content = content.replace(f"%{key}%", str(value))
 
-    tmp = None
     target = NGINX_SITES_AVAILABLE.joinpath(name)
 
     try:
-        with tempfile.NamedTemporaryFile(
-            prefix=f"{name}-", suffix=".tmp", delete=False, mode="w", encoding="utf-8"
-        ) as tmp_file:
-            tmp_file.write(content)
-            tmp = Path(tmp_file.name)
-
-        command = ["sudo", "mv", tmp, target]
-        run(command, stderr=PIPE, check=True)
+        command = ["sudo", "tee", str(target)]
+        run(
+            command,
+            input=content.encode("utf-8"),
+            stdout=PIPE,
+            stderr=PIPE,
+            check=True,
+        )
     except CalledProcessError as e:
         log = f"Unable to create '{target}': {e.stderr.decode()}"
         Logger.print_error(log)
         raise
-    finally:
-        if tmp is not None:
-            tmp.unlink(missing_ok=True)
 
 
 def create_nginx_cfg(
@@ -352,6 +421,7 @@ def create_nginx_cfg(
     try:
         Logger.print_status(f"Creating NGINX config for {display_name} ...")
 
+        ensure_nginx_site_layout()
         source = NGINX_SITES_AVAILABLE.joinpath(cfg_name)
         target = NGINX_SITES_ENABLED.joinpath(cfg_name)
         remove_file(Path("/etc/nginx/sites-enabled/default"), True)

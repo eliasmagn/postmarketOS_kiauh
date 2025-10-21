@@ -20,7 +20,8 @@
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.
 - ✅ Detect the active NGINX include directory (conf.d vs http.d) so Fluidd installs succeed on Alpine/postmarketOS hosts without manual intervention.
 - ✅ Fix web UI detection when generating example `printer.cfg` files so Mainsail/Fluidd include stanzas are added automatically after installation.
-- ✅ Render Fluidd's NGINX configuration via secure temporary files before privileged moves so doas-backed installs no longer lose the template mid-run.
+- ✅ Pipe Fluidd's NGINX configuration into place with `sudo tee` so doas-backed installs no longer lose the template before it lands in `/etc/nginx`.
+- ✅ Provision missing `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` directories on Alpine-style hosts and insert an include so multiple dashboards can remain enabled without editing `nginx.conf` directly.
 - ✅ Harden NGINX port detection so missing site configs fall back to the stored defaults instead of aborting the installer menus.
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
