@@ -9,6 +9,8 @@ The project focuses on:
 - Providing a resilient installation experience across multiple Linux families.
 - Replacing disruptive post-install reboots with clear guidance so scripted deployments can finish gracefully.
 - Maintaining documentation that highlights platform-specific nuances for end users.
+- Accepting case-insensitive yes/no responses—including numeric toggles like `1`/`0`—so touch keyboards and remote terminals
+  can breeze through prompts without tripping validation.
 - Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents—cross-compilation toolchains included—so postmarketOS users can reproduce the same setup flow without manual package hunting.
 - Steering the self-update routine toward the postmarketOS community fork by default while still allowing personal forks to override the `origin` remote through `KIAUH_REPO_URL`.
 - Normalizing Moonraker's Debian-centric dependency manifests so apk-based systems transparently reuse and translate the same requirements without aborting the install flow.

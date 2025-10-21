@@ -30,6 +30,8 @@
 - [x] Ship an apk/OpenRC-aware crowsnest installer so Fluidd and Mainsail webcam panels work without manual service tweaks.
 - [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.
 - [x] Pause menu spinners around privileged commands so sudo password prompts stay visible during update checks.
+- [x] Accept case-insensitive yes/no responses (including `1`/`0` and `on`/`off`) so prompt validation works regardless of the
+      input casing users prefer.
 - [x] Write NGINX site templates to secure temporary files so escalated moves succeed even when sudo is mapped to doas on postmarketOS.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
