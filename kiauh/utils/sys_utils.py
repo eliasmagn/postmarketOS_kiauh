@@ -800,27 +800,38 @@ def create_env_file(path: Path, content: str) -> None:
 
 def remove_system_service(service_name: str) -> None:
     """
-    Disables and removes a systemd service
-    :param service_name: name of the service unit file - must end with '.service'
+    Disable and remove a managed service file for the active init system.
+    :param service_name: name of the service (with or without the '.service' suffix)
     :return: None
     """
     try:
-        if not service_name.endswith(".service"):
-            raise ValueError(f"service_name '{service_name}' must end with '.service'")
-
+        init_system = get_init_system()
         service_dir = get_service_directory()
-        file: Path = service_dir.joinpath(service_name)
+
+        normalized_name = service_name
+        if init_system == InitSystem.SYSTEMD:
+            if not normalized_name.endswith(".service"):
+                normalized_name = f"{normalized_name}.service"
+        elif init_system == InitSystem.OPENRC:
+            if normalized_name.endswith(".service"):
+                normalized_name = normalized_name[: -len(".service")]
+        else:
+            raise RuntimeError("Unsupported init system. Unable to remove services.")
+
+        file: Path = service_dir.joinpath(normalized_name)
         if not file.exists() or not file.is_file():
-            Logger.print_info(f"Service '{service_name}' does not exist! Skipped ...")
+            Logger.print_info(
+                f"Service '{normalized_name}' does not exist! Skipped ..."
+            )
             return
 
-        Logger.print_status(f"Removing {service_name} ...")
-        cmd_sysctl_service(service_name, "stop")
-        cmd_sysctl_service(service_name, "disable")
+        Logger.print_status(f"Removing {normalized_name} ...")
+        cmd_sysctl_service(normalized_name, "stop")
+        cmd_sysctl_service(normalized_name, "disable")
         remove_with_sudo(file)
         cmd_sysctl_manage("daemon-reload")
         cmd_sysctl_manage("reset-failed")
-        Logger.print_ok(f"{service_name} successfully removed!")
+        Logger.print_ok(f"{normalized_name} successfully removed!")
     except Exception as e:
         Logger.print_error(f"Error removing {service_name}: {e}")
         raise

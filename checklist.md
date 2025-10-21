@@ -11,6 +11,7 @@
 - [x] Extend the Wayland preset helper with an Sxmo wlroots profile so msm8953 reference images launch KlipperScreen reliably.
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
+- [x] Install and register a native OpenRC KlipperScreen service so standalone console installs boot directly into the UI.
 - [x] Gate Moonraker update-manager's `managed_services` stanza behind the selected KlipperScreen autostart backend.
 - [x] Teach the Moonraker dependency parser to reuse the Debian list when apk-based systems lack a dedicated entry and translate it on the fly.
 - [x] Document postmarketOS-specific prerequisites for the init-service abstraction and Wayland presets in the README.

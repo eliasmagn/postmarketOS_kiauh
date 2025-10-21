@@ -414,6 +414,93 @@ install_systemd_service()
     add_user_to_group "$USER" tty
 }
 
+install_openrc_service()
+{
+    if [ "$INIT_SYSTEM" != "openrc" ]; then
+        echo_text "Non-OpenRC init detected. Skipping OpenRC service installation."
+        return
+    fi
+
+    echo_text "Installing KlipperScreen OpenRC service"
+
+    local service_path="/etc/init.d/KlipperScreen"
+    local user_id
+    user_id=$(id -u "$USER")
+
+    cat <<'EOF_OPENRC' | sed \
+        -e "s|@KSPATH@|$KSPATH|g" \
+        -e "s|@KSENV@|$KSENV|g" \
+        -e "s|@BACKEND@|${BACKEND:-X}|g" \
+        -e "s|@USER@|$USER|g" \
+        -e "s|@USER_ID@|$user_id|g" \
+        | $PRIV_CMD tee "$service_path" > /dev/null
+#!/sbin/openrc-run
+
+description="KlipperScreen standalone service"
+command="@KSPATH@/scripts/KlipperScreen-start.sh"
+command_user="@USER@"
+command_background="yes"
+pidfile="/run/$RC_SVCNAME.pid"
+supervisor=supervise-daemon
+
+depend() {
+    need localmount
+    use dbus seatd
+}
+
+_kiauh_wait_for_moonraker() {
+    local url="${MOONRAKER_URL:-http://127.0.0.1:7125/server/info}"
+    local tries=60
+    local have_client=""
+    if command -v wget >/dev/null 2>&1; then
+        have_client="wget"
+    elif command -v curl >/dev/null 2>&1; then
+        have_client="curl"
+    fi
+
+    if [ -z "$have_client" ]; then
+        ewarn "No curl/wget available to probe Moonraker; starting immediately."
+        return 0
+    fi
+
+    while [ $tries -gt 0 ]; do
+        if [ "$have_client" = "wget" ]; then
+            wget -qO- "$url" >/dev/null 2>&1 && return 0
+        else
+            curl -fsS "$url" >/dev/null 2>&1 && return 0
+        fi
+        sleep 2
+        tries=$((tries - 1))
+    done
+    ewarn "Moonraker did not become ready in time; continuing regardless."
+    return 0
+}
+
+start_pre() {
+    export KS_DIR="@KSPATH@"
+    export KS_ENV="@KSENV@"
+    export KS_XCLIENT="@KSENV@/bin/python @KSPATH@/screen.py"
+    export BACKEND="@BACKEND@"
+    export XDG_RUNTIME_DIR="/run/user/@USER_ID@"
+    checkpath --directory --mode 0700 --owner "@USER@":"@USER@" "$XDG_RUNTIME_DIR"
+    _kiauh_wait_for_moonraker
+}
+EOF_OPENRC
+
+    $PRIV_CMD chmod +x "$service_path"
+    add_user_to_group "$USER" tty
+    add_user_to_group "$USER" video
+    add_user_to_group "$USER" input
+
+    if command_exists rc-update; then
+        if $PRIV_CMD rc-update add KlipperScreen default >/dev/null 2>&1; then
+            echo_ok "Linked KlipperScreen into the default OpenRC runlevel"
+        else
+            echo_text "KlipperScreen was already registered with rc-update"
+        fi
+    fi
+}
+
 create_policy()
 {
     POLKIT_DIR="/etc/polkit-1/rules.d"
@@ -604,7 +691,13 @@ if [[ $SERVICE =~ ^[nN]$ ]]; then
     echo_text "The graphical backend will NOT be installed"
 else
     install_graphical_backend
-    install_systemd_service
+    if [ "$INIT_SYSTEM" = "systemd" ]; then
+        install_systemd_service
+    elif [ "$INIT_SYSTEM" = "openrc" ]; then
+        install_openrc_service
+    else
+        echo_text "Unknown init system. Skipping service installation."
+    fi
     if [ -z "$START" ]; then
         START=1
     fi
