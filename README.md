@@ -290,6 +290,8 @@ that you can plan any manual workarounds.
 
 > ℹ️ **Debian fallback on apk systems** – Moonraker's dependency manifest currently ships a single Debian block. When KIAUH detects an Alpine/postmarketOS environment it now reuses that list, feeds the entries through the translation table above, and surfaces warnings for packages without a native apk port (e.g., `packagekit`).
 
+> ✅ **BusyBox-friendly policykit install** – postmarketOS ships BusyBox utilities whose `grep` lacks the `-P` flag used by Moonraker's policykit script. When that happens KIAUH now installs GNU `grep` automatically on apk-based systems and retries the helper so the policykit rules land correctly.
+
 #### Crowsnest core installer (`tools/libs/pkglist-generic.sh`)
 
 | Debian package     | Alpine package(s)           |
