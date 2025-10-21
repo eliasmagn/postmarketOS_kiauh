@@ -129,6 +129,10 @@ cd ~ && git clone https://github.com/dw-0/kiauh.git
   number into the "Perform action"
   prompt and confirm by hitting ENTER.
 
+### 🔄 Update menu UX
+
+- Loading spinners now pause automatically whenever `sudo` needs your password or the package manager prints interactive output, so update checks no longer obscure the prompt behind the animation.
+
 ### ♻️ Init system compatibility
 
 KIAUH now ships with a unified init abstraction so phones, tablets, and SBCs share the same workflows regardless of which service manager they boot. During startup the helper automatically detects whether the host is running **systemd** or

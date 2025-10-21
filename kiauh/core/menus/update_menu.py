@@ -251,7 +251,8 @@ class UpdateMenu(BaseMenu):
         self._set_status_data("klipperscreen", get_klipperscreen_status)
         self._set_status_data("crowsnest", get_crowsnest_status)
 
-        update_system_package_lists(silent=True)
+        with self.pause_loading():
+            update_system_package_lists(silent=True)
         self.packages = get_upgradable_packages()
         self.package_count = len(self.packages)
 
