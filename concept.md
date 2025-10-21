@@ -4,6 +4,7 @@ KIAUH (Klipper Installation And Update Helper) streamlines the setup and mainten
 
 The project focuses on:
 
+- Capturing handset and tablet ergonomics—navigation, scaling, and orientation heuristics—so the mobile UX feels native on postmarketOS touch shells.
 - Automating environment preparation for Klipper, Moonraker, and companion tools.
 - Providing a resilient installation experience across multiple Linux families.
 - Maintaining documentation that highlights platform-specific nuances for end users.
@@ -11,3 +12,5 @@ The project focuses on:
 - Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Adapting KlipperScreen autostart to the surrounding shell—desktop environments receive `.desktop` launchers while console-only OpenRC systems get login hooks that wait for Moonraker before spawning the UI.
+
+As the scope expands beyond SBCs, we treat touch-first UX goals—gesture-ready launchers, portrait rotation defaults, and low-power service policies—as first-class citizens so postmarketOS phones and tablets can host Klipper without desktop-era compromises.

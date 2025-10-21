@@ -61,6 +61,19 @@ is the simplest way to flash an image like this to an SD card.
 * If you need more help for using the Raspberry Pi Imager, please visit
   the [official documentation](https://www.raspberrypi.com/documentation/computers/getting-started.html).
 
+
+#### postmarketOS device prerequisites
+
+If you are deploying KIAUH on a phone or tablet that ships with postmarketOS, make sure the base image is prepped through [pmbootstrap](https://wiki.postmarketos.org/wiki/Pmbootstrap) and that you can reach the device over SSH. The following checklist helps align the mobile environment with KIAUH's init-system and Wayland tooling:
+
+- Flash a recent `postmarketos-base` rootfs and enable SSH or USB networking (`pmbootstrap install --ssh`).
+- Install one of the touch UIs (`postmarketos-ui-phosh` or `postmarketos-ui-plasma-mobile`) so the Wayland presets have an available session.
+- Ensure the main user belongs to the `video`, `input`, and `plugdev` groups so KlipperScreen inherits display and input permissions.
+- Start the seat management service after the first boot (`rc-update add seatd default && rc-service seatd start`) because the KlipperScreen Wayland wrapper relies on it.
+- Keep the vendor-specific DRM or DSI panel drivers enabled; the display preset generator reads them to pre-seed orientation hints.
+
+With these prerequisites met, the init-system helper will link services into OpenRC automatically and the launcher presets can bind to the device's Wayland shell without manual tweaks.
+
 These steps **only** apply if you are actually using a Raspberry Pi. In case you
 want
 to use a different SBC (like an Orange Pi or any other Pi derivates), please
@@ -113,8 +126,8 @@ cd ~ && git clone https://github.com/dw-0/kiauh.git
 
 ### ♻️ Init system compatibility
 
-KIAUH automatically detects whether the host is running **systemd** or
-**OpenRC** during startup. All service files are created in the appropriate
+KIAUH now ships with a unified init abstraction so phones, tablets, and SBCs share the same workflows regardless of which service manager they boot. During startup the helper automatically detects whether the host is running **systemd** or
+**OpenRC**. All service files are created in the appropriate
 location (`/etc/systemd/system` for systemd, `/etc/init.d` for OpenRC) and every
 component now executes start/stop/enable operations through a shared helper.
 On OpenRC-based systems the helper transparently switches to `rc-service` and
@@ -124,8 +137,10 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
-that mirrors the upstream Phosh and Plasma Mobile recommendations. KIAUH writes
-the following artefacts after cloning the KlipperScreen repository:
+that mirrors the upstream Phosh and Plasma Mobile recommendations while also
+surfacing device-aware display defaults gathered from postmarketOS hardware
+probing. KIAUH writes the following artefacts after cloning the KlipperScreen
+repository:
 
 - A shell wrapper in `~/.local/bin/` that exports the compositor-friendly
   environment variables (Qt, GTK, SDL, etc.) before delegating to

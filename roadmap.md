@@ -6,11 +6,16 @@
 - ✅ Detect the active init system and wire service management to both systemd and OpenRC so installers and maintenance flows stay in sync.
 - ✅ Ship Wayland launcher presets for Phosh/Plasma along with auto-generated KlipperScreen display defaults so mobile shells behave out of the box.
 - ✅ Auto-configure KlipperScreen autostart across Phosh/Plasma desktops and OpenRC consoles while keeping Moonraker's update-manager systemd hints optional.
+- ✅ Publish postmarketOS-specific prerequisites covering SSH access, UI packages, and seat management so the new presets work on phones and tablets.
+- Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
+- Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 
 ## Mid Term
 - Introduce automated detection for other lightweight distributions (e.g., OpenWrt derivatives) while keeping Debian compatibility intact.
 - Provide localized documentation updates mirroring the primary README changes.
+- Coordinate with KlipperScreen maintainers and Alpine/postmarketOS package maintainers to upstream the Wayland wrapper and dependency fixes.
 
 ## Long Term
 - Explore a plugin-based dependency resolver so that package translations can be shipped without touching the core logic.
 - Build a continuous integration smoke test that exercises the installer on both Debian and Alpine containers.
+- Investigate automated flashing and regression testing hooks for actual postmarketOS hardware in CI once device farms are available.
