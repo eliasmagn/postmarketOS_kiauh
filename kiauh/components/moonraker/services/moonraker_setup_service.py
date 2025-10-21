@@ -34,6 +34,7 @@ from components.moonraker.services.moonraker_instance_service import (
 )
 from components.moonraker.utils.utils import (
     backup_moonraker_dir,
+    configure_apk_update_manager,
     create_example_moonraker_conf,
     disable_system_updates,
     install_moonraker_packages,
@@ -351,7 +352,13 @@ class MoonrakerSetupService:
         Logger.print_status("Installing Moonraker policykit rules ...")
 
         manager = get_package_manager()
-        if not has_package_equivalent("packagekit", manager):
+        if manager == PackageManager.APK:
+            if not configure_apk_update_manager(self.moonraker_list):
+                Logger.print_warn(
+                    "Failed to install the apk-based Moonraker update manager drop-in. "
+                    "System package updates may be unavailable."
+                )
+        elif not has_package_equivalent("packagekit", manager):
             Logger.print_info(
                 "PackageKit is unavailable on this platform; skipping Moonraker "
                 "policykit rule installation."

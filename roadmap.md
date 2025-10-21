@@ -21,7 +21,7 @@
 - ✅ Harden NGINX port detection so missing site configs fall back to the stored defaults instead of aborting the installer menus.
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
-- ✅ Skip Moonraker's PackageKit policykit helper and disable the Update Manager's system provider when PackageKit is unavailable on apk-based systems to eliminate warning banners.
+- ✅ Ship an apt-compatible Moonraker update-manager drop-in on apk-based systems so the Update Manager works without PackageKit while keeping the policykit helper intact and warning-free.
 - ✅ Offer guided nftables allow-rule prompts for Moonraker and web UIs with selectable network scopes on nftables-enabled hosts.
 - ✅ Provide an apk-aware crowsnest deployment that renders config templates and installs an OpenRC service so Fluidd/Mainsail webcams stream on postmarketOS.
 - ✅ Offer optional WireGuard provisioning so remote access can ride an encrypted tunnel alongside the nftables automation.
