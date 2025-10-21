@@ -6,10 +6,14 @@
 #                                                                         #
 #  This file may be distributed under the terms of the GNU GPLv3 license  #
 # ======================================================================= #
+import os
+import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CalledProcessError, run
-from typing import List
+from textwrap import dedent
+from typing import Dict, List, Optional
 
 from components.klipper.klipper import Klipper
 from components.klipperscreen import (
@@ -39,15 +43,423 @@ from utils.git_utils import (
     git_clone_wrapper,
     git_pull_wrapper,
 )
-from utils.input_utils import get_confirm
+from utils.input_utils import get_confirm, get_selection_input
 from utils.instance_utils import get_instances
 from utils.sys_utils import (
+    InitSystem,
     check_python_version,
     cmd_sysctl_service,
+    detect_init_system,
     get_service_directory,
     install_python_requirements,
     remove_system_service,
 )
+
+
+@dataclass(frozen=True)
+class WaylandPreset:
+    key: str
+    name: str
+    desktop: str
+    description: str
+    env: Dict[str, str]
+    notes: List[str]
+
+
+@dataclass
+class DisplayInfo:
+    name: str
+    width: int
+    height: int
+    rotation: Optional[int] = None
+
+
+WAYLAND_PRESETS: Dict[str, WaylandPreset] = {
+    "1": WaylandPreset(
+        key="1",
+        name="Phosh",
+        desktop="Phosh",
+        description=(
+            "Optimised for GNOME/Phosh shells where GTK, Qt and SDL apps need explicit "
+            "Wayland configuration and where fractional scaling is handled by the shell."
+        ),
+        env={
+            "XDG_SESSION_TYPE": "wayland",
+            "WAYLAND_DISPLAY": "wayland-0",
+            "QT_QPA_PLATFORM": "wayland",
+            "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
+            "GDK_BACKEND": "wayland",
+            "SDL_VIDEODRIVER": "wayland",
+            "MOZ_ENABLE_WAYLAND": "1",
+            "CLUTTER_BACKEND": "wayland",
+            "WLR_NO_HARDWARE_CURSORS": "1",
+        },
+        notes=[
+            "Makes KlipperScreen follow Phosh's compositor scaling.",
+            "Disables Qt's client-side decorations to avoid double title bars.",
+        ],
+    ),
+    "2": WaylandPreset(
+        key="2",
+        name="Plasma Mobile",
+        desktop="Plasma Mobile",
+        description=(
+            "Targets Plasma Mobile sessions that ship the KDE Wayland compositor and "
+            "QtQuick stack. Applies KDE-specific hints alongside generic Wayland flags."
+        ),
+        env={
+            "XDG_SESSION_TYPE": "wayland",
+            "QT_QPA_PLATFORM": "wayland",
+            "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
+            "GDK_BACKEND": "wayland",
+            "SDL_VIDEODRIVER": "wayland",
+            "MOZ_ENABLE_WAYLAND": "1",
+            "QT_QUICK_CONTROLS_STYLE": "Plasma",
+            "QT_QPA_PLATFORMTHEME": "kde",
+            "KWIN_DRM_USE_MODIFIERS": "1",
+            "XCURSOR_SIZE": "24",
+        },
+        notes=[
+            "Uses KDE's platform theme so widgets inherit Plasma styling.",
+            "Keeps cursor size predictable when Plasma's scaling kicks in.",
+        ],
+    ),
+}
+
+WAYLAND_PRESET_SKIP_KEY = "0"
+KLIPPERSCREEN_CONFIG_PATH = Path.home().joinpath("printer_data/config/KlipperScreen.conf")
+
+
+def prompt_wayland_preset() -> Optional[WaylandPreset]:
+    Logger.print_info(
+        "KlipperScreen now ships Wayland session presets. Select the one that matches your "
+        "mobile shell to pre-create launchers with the right environment variables."
+    )
+    Logger.print_info(
+        "If you prefer to handle this manually you can skip the preset and adjust the files "
+        "under ~/KlipperScreen/scripts later."
+    )
+
+    Logger.print_status("Available presets:")
+    Logger.print_info(f"  {WAYLAND_PRESET_SKIP_KEY}) Skip Wayland preset creation")
+    for key, preset in WAYLAND_PRESETS.items():
+        Logger.print_info(f"  {key}) {preset.name} — {preset.description}")
+        for note in preset.notes:
+            Logger.print_info(f"       • {note}")
+
+    selection = get_selection_input(
+        "Choose a Wayland preset (or 0 to skip)",
+        {**WAYLAND_PRESETS, WAYLAND_PRESET_SKIP_KEY: WAYLAND_PRESET_SKIP_KEY},
+        default=WAYLAND_PRESET_SKIP_KEY,
+    )
+    if selection == WAYLAND_PRESET_SKIP_KEY:
+        return None
+    return WAYLAND_PRESETS[selection]
+
+
+def configure_wayland_launchers(preset: WaylandPreset) -> None:
+    try:
+        wrapper_path = _write_wayland_wrapper(preset)
+        _write_desktop_entry(wrapper_path, preset)
+        _write_user_service(wrapper_path, preset)
+        Logger.print_ok(
+            "Wayland launchers created in ~/.local/share/applications and ~/.config/systemd/user."
+        )
+    except Exception as err:  # pragma: no cover - defensive logging only
+        Logger.print_warn(
+            "Failed to create Wayland launcher helpers. You can re-run the preset from the "
+            "KlipperScreen installer menu."
+        )
+        Logger.print_error(str(err))
+
+
+def _write_wayland_wrapper(preset: WaylandPreset) -> Path:
+    bin_dir = Path.home().joinpath(".local/bin")
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    wrapper_path = bin_dir.joinpath(
+        f"klipperscreen-{preset.name.lower().replace(' ', '-')}-wayland.sh"
+    )
+
+    env_lines = [
+        "#!/bin/sh",
+        "set -eu",
+        "export KS_DIR=\"" + KLIPPERSCREEN_DIR.as_posix() + "\"",
+        "export KS_ENV=\"" + KLIPPERSCREEN_ENV_DIR.as_posix() + "\"",
+        "export KS_XCLIENT=\"" +
+        f"{KLIPPERSCREEN_ENV_DIR.as_posix()}/bin/python {KLIPPERSCREEN_DIR.as_posix()}/screen.py" +
+        "\"",
+        "export BACKEND=\"w\"",
+        'export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"',
+    ]
+
+    for key, value in preset.env.items():
+        escaped = value.replace("\"", "\\\"")
+        env_lines.append(f'export {key}="{escaped}"')
+
+    env_lines.append(
+        f'exec "{KLIPPERSCREEN_DIR.joinpath("scripts/KlipperScreen-start.sh").as_posix()}" "$@"'
+    )
+
+    wrapper_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+    os.chmod(wrapper_path, 0o755)
+    Logger.print_info(f"Created Wayland wrapper: {wrapper_path}")
+    return wrapper_path
+
+
+def _write_desktop_entry(wrapper_path: Path, preset: WaylandPreset) -> None:
+    desktop_dir = Path.home().joinpath(".local/share/applications")
+    desktop_dir.mkdir(parents=True, exist_ok=True)
+    desktop_path = desktop_dir.joinpath(
+        f"klipperscreen-{preset.name.lower().replace(' ', '-')}.desktop"
+    )
+
+    desktop_content = dedent(
+        f"""
+        [Desktop Entry]
+        Type=Application
+        Name=KlipperScreen ({preset.name})
+        Comment=Launch KlipperScreen with the {preset.desktop} Wayland preset
+        Exec={wrapper_path.as_posix()}
+        Icon=klipperscreen
+        Terminal=false
+        Categories=Utility;System;
+        Keywords=klipper;klipperscreen;wayland;
+        """
+    ).strip()
+
+    desktop_path.write_text(desktop_content + "\n", encoding="utf-8")
+    Logger.print_info(f"Desktop entry stored at {desktop_path}")
+
+
+def _write_user_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+    init_system = detect_init_system()
+    if init_system == InitSystem.OPENRC:
+        _write_openrc_service(wrapper_path, preset)
+    elif init_system == InitSystem.SYSTEMD:
+        _write_systemd_user_service(wrapper_path, preset)
+    else:
+        Logger.print_warn(
+            "Unsupported init system for user services; generated desktop entry only."
+        )
+
+
+def _write_systemd_user_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+    user_systemd_dir = Path.home().joinpath(".config/systemd/user")
+    user_systemd_dir.mkdir(parents=True, exist_ok=True)
+    service_path = user_systemd_dir.joinpath(
+        f"klipperscreen-{preset.name.lower().replace(' ', '-')}.service"
+    )
+
+    env_lines = "\n".join(
+        (
+            f'Environment="{key}={value}"'
+            if " " in value
+            else f"Environment={key}={value}"
+        )
+        for key, value in preset.env.items()
+    )
+
+    service_content = dedent(
+        f"""
+        [Unit]
+        Description=KlipperScreen ({preset.name} Wayland preset)
+        After=graphical-session.target
+        PartOf=graphical-session.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        Environment=KS_DIR={KLIPPERSCREEN_DIR.as_posix()}
+        Environment=KS_ENV={KLIPPERSCREEN_ENV_DIR.as_posix()}
+        Environment="KS_XCLIENT={KLIPPERSCREEN_ENV_DIR.as_posix()}/bin/python {KLIPPERSCREEN_DIR.as_posix()}/screen.py"
+        Environment=BACKEND=w
+        Environment=XDG_RUNTIME_DIR=%t
+        {env_lines}
+        ExecStart={wrapper_path.as_posix()}
+
+        [Install]
+        WantedBy=default.target
+        """
+    ).strip()
+
+    service_path.write_text(service_content + "\n", encoding="utf-8")
+    Logger.print_info(
+        "Systemd user service written to ~/.config/systemd/user. Enable it with "
+        f"'systemctl --user enable --now {service_path.name}'."
+    )
+
+
+def _write_openrc_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+    openrc_dir = Path.home().joinpath(".config/openrc")
+    svc_dir = openrc_dir.joinpath("init.d")
+    svc_dir.mkdir(parents=True, exist_ok=True)
+    service_path = svc_dir.joinpath(
+        f"klipperscreen-{preset.name.lower().replace(' ', '-')}"
+    )
+
+    content = dedent(
+        f"""
+        #!/sbin/openrc-run
+        description="KlipperScreen ({preset.name} Wayland preset)"
+        command="{wrapper_path.as_posix()}"
+        command_background="yes"
+        pidfile="/run/$RC_SVCNAME.pid"
+        name="klipperscreen-{preset.name.lower().replace(' ', '-')}"
+        """
+    ).strip()
+
+    service_path.write_text(content + "\n", encoding="utf-8")
+    os.chmod(service_path, 0o755)
+    Logger.print_info(
+        "OpenRC user service stub created under ~/.config/openrc/init.d (requires manual rc-update setup)."
+    )
+
+
+def detect_internal_display() -> Optional[DisplayInfo]:
+    detectors = [_detect_with_wlr_randr, _detect_with_weston_info]
+    for detector in detectors:
+        info = detector()
+        if info:
+            return info
+    return None
+
+
+def _detect_with_wlr_randr() -> Optional[DisplayInfo]:
+    if shutil.which("wlr-randr") is None:
+        return None
+    try:
+        result = run("wlr-randr", capture_output=True, text=True, check=True)
+    except CalledProcessError:
+        return None
+
+    display: Optional[DisplayInfo] = None
+    current_name: Optional[str] = None
+    rotation: Optional[int] = None
+
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.rstrip()
+        if not line:
+            continue
+        if not line.startswith(" "):
+            if display and display.name:
+                break
+            current_name = line.split()[0]
+            rotation = None
+            continue
+
+        if current_name and _looks_like_internal_connector(current_name):
+            if "Transform:" in line:
+                rotation = _transform_to_rotation(line.split("Transform:", 1)[1].strip())
+            match = _extract_resolution(line)
+            if match:
+                width, height = match
+                display = DisplayInfo(
+                    name=current_name,
+                    width=width,
+                    height=height,
+                    rotation=rotation,
+                )
+    return display
+
+
+def _detect_with_weston_info() -> Optional[DisplayInfo]:
+    if shutil.which("weston-info") is None:
+        return None
+    try:
+        result = run("weston-info", capture_output=True, text=True, check=True)
+    except CalledProcessError:
+        return None
+
+    display: Optional[DisplayInfo] = None
+    current_name: Optional[str] = None
+    rotation: Optional[int] = None
+
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("output"):
+            _, current_name, *_ = line.split()
+            rotation = None
+            continue
+        if not current_name or not _looks_like_internal_connector(current_name):
+            continue
+        if "transform" in line and "transform=" in line:
+            rotation = _transform_to_rotation(line.split("transform=", 1)[1])
+        match = _extract_resolution(line)
+        if match:
+            width, height = match
+            display = DisplayInfo(
+                name=current_name,
+                width=width,
+                height=height,
+                rotation=rotation,
+            )
+            break
+    return display
+
+
+def _looks_like_internal_connector(name: str) -> bool:
+    lowered = name.lower()
+    return any(token in lowered for token in ("edp", "dsi", "lvds", "panel", "default"))
+
+
+def _extract_resolution(line: str) -> Optional[tuple[int, int]]:
+    match = re.search(r"(\d{3,4})x(\d{3,4})", line)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    return None
+
+
+def _transform_to_rotation(value: str) -> Optional[int]:
+    lowered = value.lower()
+    if "270" in lowered or "left" in lowered:
+        return 270
+    if "180" in lowered or "inverted" in lowered:
+        return 180
+    if "90" in lowered or "right" in lowered:
+        return 90
+    if "0" in lowered or "normal" in lowered:
+        return 0
+    return None
+
+
+def preseed_klipperscreen_config(display: DisplayInfo) -> None:
+    KLIPPERSCREEN_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    width_line = f"width: {display.width}"
+    height_line = f"height: {display.height}"
+    rotation_hint = (
+        f"# rotation_hint: {display.rotation}"
+        if display.rotation is not None
+        else "# rotation_hint: 0"
+    )
+    header = (
+        f"# Auto-generated by KIAUH using {display.name} detection.\n"
+        "# Adjust these values if the compositor applies a different scale or rotation.\n"
+    )
+
+    if not KLIPPERSCREEN_CONFIG_PATH.exists():
+        content = "\n".join(["[main]", header.strip(), width_line, height_line, rotation_hint]) + "\n"
+        KLIPPERSCREEN_CONFIG_PATH.write_text(content, encoding="utf-8")
+        Logger.print_ok(
+            f"Created KlipperScreen.conf with detected resolution {display.width}x{display.height}."
+        )
+        return
+
+    existing = KLIPPERSCREEN_CONFIG_PATH.read_text(encoding="utf-8").splitlines()
+    updated = False
+    if not any(line.startswith("width:") for line in existing):
+        existing.append(width_line)
+        updated = True
+    if not any(line.startswith("height:") for line in existing):
+        existing.append(height_line)
+        updated = True
+    if rotation_hint not in existing:
+        existing.append(rotation_hint)
+        updated = True
+    if updated:
+        KLIPPERSCREEN_CONFIG_PATH.write_text("\n".join(existing) + "\n", encoding="utf-8")
+        Logger.print_ok("Updated KlipperScreen.conf with detected display defaults.")
 
 
 def install_klipperscreen() -> None:
@@ -55,6 +467,8 @@ def install_klipperscreen() -> None:
 
     if not check_python_version(3, 7):
         return
+
+    selected_preset = prompt_wayland_preset()
 
     mr_instances = get_instances(Moonraker)
     if not mr_instances:
@@ -89,6 +503,11 @@ def install_klipperscreen() -> None:
                 "Moonraker is not installed! Cannot add "
                 "KlipperScreen to update manager!"
             )
+        if selected_preset is not None:
+            configure_wayland_launchers(selected_preset)
+        display_info = detect_internal_display()
+        if display_info is not None:
+            preseed_klipperscreen_config(display_info)
         Logger.print_ok("KlipperScreen successfully installed!")
     except CalledProcessError as e:
         Logger.print_error(f"Error installing KlipperScreen:\n{e}")
