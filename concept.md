@@ -23,7 +23,7 @@ The project focuses on:
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, Sxmo, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Offering a panorama-orientation prompt that rewrites KlipperScreen defaults and seeds an X11 helper so wide touch panels report horizontal resolutions without extra manual tweaks.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—so web interfaces install without manual path fixes.
-- Generating NGINX site definitions via transient files in secure temp directories so privilege escalations (sudo/doas) can move them into place without racing home-directory cleanup on mobile installs.
+- Streaming generated NGINX site definitions directly into privileged paths with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
 - Ensuring generated printer configuration templates automatically link the installed web UIs (Mainsail, Fluidd, etc.) so fresh Klipper instances keep their dashboards reachable without manual edits.
 - Falling back to sane defaults when expected NGINX site stanzas are absent, keeping menu flows responsive instead of crashing on missing configs.
 - Detecting nftables-based firewalls and layering guided prompts that open Moonraker and Fluidd ports only for the networks you approve, keeping phones and tablets reachable without exposing them broadly by default.
