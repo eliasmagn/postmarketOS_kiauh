@@ -22,6 +22,7 @@ CURRENT_USER = pwd.getpwuid(os.getuid())[0]
 
 # dirs
 SYSTEMD = Path("/etc/systemd/system")
+OPENRC = Path("/etc/init.d")
 NGINX_SITES_AVAILABLE = Path("/etc/nginx/sites-available")
 NGINX_SITES_ENABLED = Path("/etc/nginx/sites-enabled")
 NGINX_CONFD = Path("/etc/nginx/conf.d")

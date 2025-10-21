@@ -9,7 +9,7 @@
 
 from pathlib import Path
 
-from core.constants import SYSTEMD
+from utils.sys_utils import get_service_directory
 
 # repo
 CROWSNEST_REPO = "https://github.com/mainsail-crew/crowsnest.git"
@@ -25,4 +25,4 @@ CROWSNEST_MULTI_CONFIG = CROWSNEST_DIR.joinpath("tools/.config")
 CROWSNEST_INSTALL_SCRIPT = CROWSNEST_DIR.joinpath("tools/install.sh")
 CROWSNEST_BIN_FILE = Path("/usr/local/bin/crowsnest")
 CROWSNEST_LOGROTATE_FILE = Path("/etc/logrotate.d/crowsnest")
-CROWSNEST_SERVICE_FILE = SYSTEMD.joinpath(CROWSNEST_SERVICE_NAME)
+CROWSNEST_SERVICE_FILE = get_service_directory().joinpath(CROWSNEST_SERVICE_NAME)

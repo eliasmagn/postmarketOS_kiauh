@@ -8,3 +8,4 @@ The project focuses on:
 - Providing a resilient installation experience across multiple Linux families.
 - Maintaining documentation that highlights platform-specific nuances for end users.
 - Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents so postmarketOS users can reproduce the same setup flow.
+- Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.

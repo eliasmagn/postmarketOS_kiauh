@@ -13,7 +13,6 @@ import os
 import subprocess
 from pathlib import Path
 
-from core.constants import SYSTEMD
 from core.logger import Logger
 from extensions.base_extension import BaseExtension
 from extensions.klipper_backup import (
@@ -25,7 +24,12 @@ from extensions.klipper_backup import (
 from utils.fs_utils import check_file_exist, remove_with_sudo
 from utils.git_utils import git_cmd_clone
 from utils.input_utils import get_confirm
-from utils.sys_utils import cmd_sysctl_manage, remove_system_service, unit_file_exists
+from utils.sys_utils import (
+    cmd_sysctl_manage,
+    get_service_directory,
+    remove_system_service,
+    unit_file_exists,
+)
 
 
 class KlipperbackupExtension(BaseExtension):
@@ -40,7 +44,8 @@ class KlipperbackupExtension(BaseExtension):
                 if unit_type == "service":
                     remove_system_service(full_service_name)
                 elif unit_type == "timer":
-                    full_service_path: Path = SYSTEMD.joinpath(full_service_name)
+                    service_dir = get_service_directory()
+                    full_service_path: Path = service_dir.joinpath(full_service_name)
                     Logger.print_status(f"Removing {full_service_name} ...")
                     remove_with_sudo(full_service_path)
                     Logger.print_ok(f"{service_name}.{unit_type} successfully removed!")

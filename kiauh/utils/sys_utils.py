@@ -23,7 +23,7 @@ from pathlib import Path
 from subprocess import DEVNULL, PIPE, CalledProcessError, Popen, check_output, run
 from typing import Iterable, List, Literal, Set, Tuple
 
-from core.constants import SYSTEMD
+from core.constants import OPENRC, SYSTEMD
 from core.logger import Logger
 from utils.fs_utils import check_file_exist, remove_with_sudo
 from utils.input_utils import get_confirm
@@ -43,6 +43,32 @@ SysCtlManageAction = Literal["daemon-reload", "reset-failed"]
 
 class VenvCreationFailedException(Exception):
     pass
+
+
+class InitSystem(Enum):
+    SYSTEMD = "systemd"
+    OPENRC = "openrc"
+    UNKNOWN = "unknown"
+
+
+@lru_cache(maxsize=1)
+def detect_init_system() -> InitSystem:
+    if shutil.which("systemctl") and Path("/run/systemd/system").exists():
+        return InitSystem.SYSTEMD
+    if shutil.which("rc-service") and OPENRC.exists():
+        return InitSystem.OPENRC
+    return InitSystem.UNKNOWN
+
+
+def get_init_system() -> InitSystem:
+    return detect_init_system()
+
+
+def get_service_directory() -> Path:
+    init_system = get_init_system()
+    if init_system == InitSystem.OPENRC:
+        return OPENRC
+    return SYSTEMD
 
 
 class PackageManager(Enum):
@@ -624,16 +650,46 @@ def set_nginx_permissions() -> None:
         Logger.print_ok("Permissions granted.")
 
 
+def _cmd_rc_service(name: str, action: SysCtlServiceAction) -> None:
+    if action in {"start", "stop", "restart", "reload"}:
+        run(["sudo", "rc-service", name, action], stderr=PIPE, check=True)
+        return
+
+    if action in {"enable", "unmask"}:
+        run(["sudo", "rc-update", "add", name, "default"], stderr=PIPE, check=True)
+        if action == "unmask":
+            Logger.print_warn(
+                f"OpenRC does not support unmasking '{name}'. Service has been enabled instead."
+            )
+        return
+
+    if action in {"disable", "mask"}:
+        run(["sudo", "rc-update", "del", name, "default"], stderr=PIPE, check=True)
+        if action == "mask":
+            Logger.print_warn(
+                f"OpenRC does not support masking '{name}'. Service has been disabled instead."
+            )
+        return
+
+    raise ValueError(f"Unsupported action '{action}' for OpenRC")
+
+
 def cmd_sysctl_service(name: str, action: SysCtlServiceAction) -> None:
     """
-    Helper method to execute several actions for a specific systemd service. |
+    Helper method to execute several actions for a specific service. |
     :param name: the service name
     :param action: Either "start", "stop", "restart" or "disable"
     :return: None
     """
     try:
         Logger.print_status(f"{action.capitalize()} {name} ...")
-        run(["sudo", "systemctl", action, name], stderr=PIPE, check=True)
+        init_system = get_init_system()
+        if init_system == InitSystem.SYSTEMD:
+            run(["sudo", "systemctl", action, name], stderr=PIPE, check=True)
+        elif init_system == InitSystem.OPENRC:
+            _cmd_rc_service(name, action)
+        else:
+            raise RuntimeError("Unsupported init system. Unable to manage services.")
         Logger.print_ok("OK!")
     except CalledProcessError as e:
         log = f"Failed to {action} {name}: {e.stderr.decode()}"
@@ -642,12 +698,18 @@ def cmd_sysctl_service(name: str, action: SysCtlServiceAction) -> None:
 
 
 def cmd_sysctl_manage(action: SysCtlManageAction) -> None:
-    try:
-        run(["sudo", "systemctl", action], stderr=PIPE, check=True)
-    except CalledProcessError as e:
-        log = f"Failed to run {action}: {e.stderr.decode()}"
-        Logger.print_error(log)
-        raise
+    init_system = get_init_system()
+    if init_system == InitSystem.SYSTEMD:
+        try:
+            run(["sudo", "systemctl", action], stderr=PIPE, check=True)
+        except CalledProcessError as e:
+            log = f"Failed to run {action}: {e.stderr.decode()}"
+            Logger.print_error(log)
+            raise
+    elif init_system == InitSystem.OPENRC:
+        Logger.print_info(f"Skipping '{action}' on OpenRC (not required).")
+    else:
+        raise RuntimeError("Unsupported init system. Unable to manage services.")
 
 
 def unit_file_exists(
@@ -662,9 +724,13 @@ def unit_file_exists(
     """
     exclude = exclude or []
     pattern = re.compile(f"^{name}(-[0-9a-zA-Z]+)?.{suffix}$")
+    service_dir = get_service_directory()
+    if not service_dir.exists():
+        return False
+
     service_list = [
-        Path(SYSTEMD, service)
-        for service in SYSTEMD.iterdir()
+        Path(service_dir, service)
+        for service in service_dir.iterdir()
         if pattern.search(service.name) and not any(s in service.name for s in exclude)
     ]
     return any(service_list)
@@ -700,13 +766,17 @@ def create_service_file(name: str, content: str) -> None:
     :return: None
     """
     try:
+        service_dir = get_service_directory()
+        target_path = service_dir.joinpath(name)
         run(
-            ["sudo", "tee", SYSTEMD.joinpath(name)],
+            ["sudo", "tee", target_path],
             input=content.encode(),
             stdout=DEVNULL,
             check=True,
         )
-        Logger.print_ok(f"Service file created: {SYSTEMD.joinpath(name)}")
+        if get_init_system() == InitSystem.OPENRC:
+            run(["sudo", "chmod", "+x", target_path], check=True)
+        Logger.print_ok(f"Service file created: {target_path}")
     except CalledProcessError as e:
         Logger.print_error(f"Error creating service file: {e}")
         raise
@@ -738,7 +808,8 @@ def remove_system_service(service_name: str) -> None:
         if not service_name.endswith(".service"):
             raise ValueError(f"service_name '{service_name}' must end with '.service'")
 
-        file: Path = SYSTEMD.joinpath(service_name)
+        service_dir = get_service_directory()
+        file: Path = service_dir.joinpath(service_name)
         if not file.exists() or not file.is_file():
             Logger.print_info(f"Service '{service_name}' does not exist! Skipped ...")
             return
@@ -765,7 +836,8 @@ def get_service_file_path(instance_type: type, suffix: str) -> Path:
     if suffix != "":
         name += f"-{suffix}"
 
-    file_path: Path = SYSTEMD.joinpath(f"{name}.service")
+    service_dir = get_service_directory()
+    file_path: Path = service_dir.joinpath(f"{name}.service")
 
     return file_path
 

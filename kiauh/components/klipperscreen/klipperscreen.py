@@ -24,7 +24,6 @@ from components.klipperscreen import (
     KLIPPERSCREEN_UPDATER_SECTION_NAME,
 )
 from components.moonraker.moonraker import Moonraker
-from core.constants import SYSTEMD
 from core.instance_manager.instance_manager import InstanceManager
 from core.logger import DialogType, Logger
 from core.services.backup_service import BackupService
@@ -45,6 +44,7 @@ from utils.instance_utils import get_instances
 from utils.sys_utils import (
     check_python_version,
     cmd_sysctl_service,
+    get_service_directory,
     install_python_requirements,
     remove_system_service,
 )
@@ -139,10 +139,11 @@ def update_klipperscreen() -> None:
 
 
 def get_klipperscreen_status() -> ComponentStatus:
+    service_dir = get_service_directory()
     return get_install_status(
         KLIPPERSCREEN_DIR,
         KLIPPERSCREEN_ENV_DIR,
-        files=[SYSTEMD.joinpath(KLIPPERSCREEN_SERVICE_NAME)],
+        files=[service_dir.joinpath(KLIPPERSCREEN_SERVICE_NAME)],
     )
 
 

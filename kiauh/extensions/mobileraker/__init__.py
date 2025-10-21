@@ -9,7 +9,7 @@
 
 from pathlib import Path
 
-from core.constants import SYSTEMD
+from utils.sys_utils import get_service_directory
 
 # repo
 MOBILERAKER_REPO = "https://github.com/Clon1998/mobileraker_companion.git"
@@ -26,4 +26,4 @@ MOBILERAKER_ENV_DIR = Path.home().joinpath("mobileraker-env")
 # files
 MOBILERAKER_INSTALL_SCRIPT = MOBILERAKER_DIR.joinpath("scripts/install.sh")
 MOBILERAKER_REQ_FILE = MOBILERAKER_DIR.joinpath("scripts/mobileraker-requirements.txt")
-MOBILERAKER_SERVICE_FILE = SYSTEMD.joinpath(MOBILERAKER_SERVICE_NAME)
+MOBILERAKER_SERVICE_FILE = get_service_directory().joinpath(MOBILERAKER_SERVICE_NAME)

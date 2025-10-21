@@ -9,6 +9,8 @@
 
 from pathlib import Path
 
+from utils.sys_utils import InitSystem, get_init_system
+
 MODULE_PATH = Path(__file__).resolve().parent
 
 KLIPPER_REPO_URL = "https://github.com/Klipper3d/klipper.git"
@@ -29,7 +31,11 @@ KLIPPER_ENV_DIR = Path.home().joinpath("klippy-env")
 # files
 KLIPPER_REQ_FILE = KLIPPER_DIR.joinpath("scripts/klippy-requirements.txt")
 KLIPPER_INSTALL_SCRIPT = KLIPPER_DIR.joinpath("scripts/install-ubuntu-22.04.sh")
-KLIPPER_SERVICE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{KLIPPER_SERVICE_NAME}")
+_INIT_SYSTEM = get_init_system()
+if _INIT_SYSTEM == InitSystem.OPENRC:
+    KLIPPER_SERVICE_TEMPLATE = MODULE_PATH.joinpath("assets/klipper.openrc")
+else:
+    KLIPPER_SERVICE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{KLIPPER_SERVICE_NAME}")
 KLIPPER_ENV_FILE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{KLIPPER_ENV_FILE_NAME}")
 
 

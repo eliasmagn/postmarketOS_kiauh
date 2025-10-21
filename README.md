@@ -111,6 +111,16 @@ cd ~ && git clone https://github.com/dw-0/kiauh.git
   number into the "Perform action"
   prompt and confirm by hitting ENTER.
 
+### ♻️ Init system compatibility
+
+KIAUH automatically detects whether the host is running **systemd** or
+**OpenRC** during startup. All service files are created in the appropriate
+location (`/etc/systemd/system` for systemd, `/etc/init.d` for OpenRC) and every
+component now executes start/stop/enable operations through a shared helper.
+On OpenRC-based systems the helper transparently switches to `rc-service` and
+`rc-update`, so manual maintenance commands follow the native tools instead of
+`systemctl`.
+
 <h2 align="center">📦 Debian ➜ Alpine package map</h2>
 
 To keep the postmarketOS port predictable, every Debian package requested by the
