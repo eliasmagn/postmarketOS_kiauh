@@ -4,6 +4,7 @@
 - [x] Translate Debian-specific dependency names to their Alpine/postmarketOS equivalents during installation.
 - [x] Align cross-compilation toolchain translations so `apk` pulls `binutils-arm-none-eabi`, `gcc-arm-none-eabi`, `binutils-avr`, and `gcc-avr` without errors.
 - [x] Refresh documentation to describe the new package manager support.
+- [x] Ship an apk-aware KlipperScreen installer shim so X11 remains installable on postmarketOS alongside the updated Wayland guidance.
 - [x] Inventory component installer dependencies and document the Debian ➜ Alpine package mapping, including missing ports.
 - [x] Introduce init-system detection and mirror service management for systemd and OpenRC, updating every component to use the shared abstraction.
 - [x] Add Phosh/Plasma Wayland presets to the KlipperScreen installer and generate launchers during installation.

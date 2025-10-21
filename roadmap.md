@@ -8,6 +8,7 @@
 - ✅ Ship Wayland launcher presets for Phosh/Plasma along with auto-generated KlipperScreen display defaults so mobile shells behave out of the box.
 - ✅ Auto-configure KlipperScreen autostart across Phosh/Plasma desktops and OpenRC consoles while keeping Moonraker's update-manager systemd hints optional.
 - ✅ Publish postmarketOS-specific prerequisites covering SSH access, UI packages, and seat management so the new presets work on phones and tablets.
+- ✅ Replace KlipperScreen's upstream installer with an apk-aware wrapper so X11 and Wayland dependencies resolve correctly on postmarketOS.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 

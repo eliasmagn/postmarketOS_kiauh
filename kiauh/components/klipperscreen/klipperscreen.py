@@ -21,6 +21,7 @@ from components.klipperscreen import (
     KLIPPERSCREEN_DIR,
     KLIPPERSCREEN_ENV_DIR,
     KLIPPERSCREEN_INSTALL_SCRIPT,
+    KLIPPERSCREEN_INSTALL_SCRIPT_ASSET,
     KLIPPERSCREEN_LOG_NAME,
     KLIPPERSCREEN_REPO,
     KLIPPERSCREEN_REQ_FILE,
@@ -48,10 +49,12 @@ from utils.input_utils import get_confirm, get_selection_input
 from utils.instance_utils import get_instances
 from utils.sys_utils import (
     InitSystem,
+    PackageManager,
     check_python_version,
     cmd_sysctl_service,
     detect_init_system,
     get_service_directory,
+    get_package_manager,
     install_python_requirements,
     remove_system_service,
 )
@@ -151,6 +154,28 @@ WAYLAND_PRESETS: Dict[str, WaylandPreset] = {
 
 WAYLAND_PRESET_SKIP_KEY = "0"
 KLIPPERSCREEN_CONFIG_PATH = Path.home().joinpath("printer_data/config/KlipperScreen.conf")
+
+
+def _sync_installer_script_with_asset() -> None:
+    """Ensure the KlipperScreen installer understands apk based systems."""
+
+    if not KLIPPERSCREEN_INSTALL_SCRIPT_ASSET.exists():
+        return
+
+    if get_package_manager() is not PackageManager.APK:
+        return
+
+    try:
+        shutil.copy(KLIPPERSCREEN_INSTALL_SCRIPT_ASSET, KLIPPERSCREEN_INSTALL_SCRIPT)
+        os.chmod(KLIPPERSCREEN_INSTALL_SCRIPT, 0o755)
+        Logger.print_info(
+            "Patched KlipperScreen installer to use apk/doas aware helper script."
+        )
+    except OSError as err:
+        Logger.print_warn(
+            "Unable to copy apk-aware KlipperScreen installer override. Falling back "
+            f"to upstream script ({err})."
+        )
 
 
 def prompt_wayland_preset() -> Optional[WaylandPreset]:
@@ -729,6 +754,7 @@ def install_klipperscreen() -> None:
     check_install_dependencies()
 
     git_clone_wrapper(KLIPPERSCREEN_REPO, KLIPPERSCREEN_DIR)
+    _sync_installer_script_with_asset()
 
     try:
         run(KLIPPERSCREEN_INSTALL_SCRIPT.as_posix(), shell=True, check=True)
