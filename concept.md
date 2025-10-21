@@ -16,8 +16,11 @@ The project focuses on:
 - Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, Sxmo, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—so web interfaces install without manual path fixes.
+- Ensuring generated printer configuration templates automatically link the installed web UIs (Mainsail, Fluidd, etc.) so fresh Klipper instances keep their dashboards reachable without manual edits.
+- Falling back to sane defaults when expected NGINX site stanzas are absent, keeping menu flows responsive instead of crashing on missing configs.
 - Detecting nftables-based firewalls and layering guided prompts that open Moonraker and Fluidd ports only for the networks you approve, keeping phones and tablets reachable without exposing them broadly by default.
 - Replacing crowsnest's Debian-centric installer with an apk-aware deployment path that renders the upstream configuration and provisions an OpenRC service so Fluidd and Mainsail webcam panels stay functional on postmarketOS.
+- Offering optional WireGuard provisioning so remote access can ride an encrypted tunnel without hand-authoring VPN configs on postmarketOS devices.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Sequencing installer prompts so Wayland-specific choices only surface after the user opts into the Wayland backend, keeping the X11-first flow streamlined while preserving the option to revisit presets later.
 - Adapting KlipperScreen autostart to the surrounding shell—desktop environments receive `.desktop` launchers while console-only OpenRC systems get login hooks that wait for Moonraker before spawning the UI.

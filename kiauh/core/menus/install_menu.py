@@ -22,6 +22,7 @@ from components.webui_client.client_setup import install_client
 from components.webui_client.fluidd_data import FluiddData
 from components.webui_client.mainsail_data import MainsailData
 from components.webui_client.menus.client_install_menu import ClientInstallMenu
+from procedures.wireguard import provision_wireguard
 from core.menus import Option
 from core.menus.base_menu import BaseMenu
 from core.settings.kiauh_settings import KiauhSettings
@@ -54,6 +55,7 @@ class InstallMenu(BaseMenu):
             "6": Option(method=self.install_fluidd_config),
             "7": Option(method=self.install_klipperscreen),
             "8": Option(method=self.install_crowsnest),
+            "9": Option(method=self.install_wireguard),
         }
 
     def print_menu(self) -> None:
@@ -71,6 +73,7 @@ class InstallMenu(BaseMenu):
             ║ Client-Config:            │                           ║
             ║  5) [Mainsail-Config]     │                           ║
             ║  6) [Fluidd-Config]       │                           ║
+            ║ Remote Access:            │  9) [WireGuard]           ║
             ╟───────────────────────────┴───────────────────────────╢
             """
         )[1:]
@@ -107,3 +110,6 @@ class InstallMenu(BaseMenu):
 
     def install_crowsnest(self, **kwargs) -> None:
         install_crowsnest()
+
+    def install_wireguard(self, **kwargs) -> None:
+        provision_wireguard()

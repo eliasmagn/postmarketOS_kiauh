@@ -211,9 +211,20 @@ def backup_client_config_data(client: BaseWebClient) -> None:
 
 
 def get_existing_clients() -> List[BaseWebClient]:
-    clients = list(get_args(WebClientType))
+    """Return metadata objects for all installed web UIs."""
+
+    client_factories = {
+        WebClientType.MAINSAIL: MainsailData,
+        WebClientType.FLUIDD: FluiddData,
+    }
+
     installed_clients: List[BaseWebClient] = []
-    for client in clients:
+    for client_type in get_args(WebClientType):
+        factory = client_factories.get(client_type)
+        if factory is None:
+            continue
+
+        client = factory()
         if client.client_dir.exists():
             installed_clients.append(client)
 
@@ -372,6 +383,12 @@ def get_nginx_listen_port(config: Path) -> int | None:
     # noinspection HttpUrlsUsage
     pattern = r"default_server|http://|https://|[;\[\]]"
     port = ""
+    if not config.exists():
+        Logger.print_warn(
+            f"Unable to read listen port for {config.name}: config file does not exist."
+        )
+        return None
+
     with open(config, "r") as cfg:
         for line in cfg.readlines():
             line = re.sub(pattern, "", line.strip())
