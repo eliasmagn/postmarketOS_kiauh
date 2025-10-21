@@ -17,6 +17,7 @@
 - [x] Default the KlipperScreen installer to the minimal dependency set and gate optional extras behind an explicit opt-in.
 - [x] Replace KlipperScreen's NetworkManager install reboot with a manual reminder so unattended runs exit cleanly.
 - [x] Detect NGINX configuration directory variants so web UIs install cleanly on Alpine/postmarketOS hosts.
+- [x] Detect missing `grep -P` support on BusyBox-based systems, install GNU `grep`, and retry the Moonraker policykit helper automatically.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.

@@ -56,12 +56,16 @@ from utils.input_utils import (
     get_selection_input,
 )
 from utils.sys_utils import (
+    PackageManager,
+    check_package_install,
     check_python_version,
     cmd_sysctl_manage,
     cmd_sysctl_service,
     create_python_venv,
     get_ipv4_addr,
+    get_package_manager,
     install_python_requirements,
+    install_system_packages,
     unit_file_exists,
 )
 
@@ -338,24 +342,74 @@ class MoonrakerSetupService:
             return
 
         try:
-            command = [POLKIT_SCRIPT, "--disable-systemctl"]
-            result = run(
-                command,
-                stderr=PIPE,
-                stdout=DEVNULL,
-                text=True,
+            if self.__run_polkit_script():
+                return
+
+            Logger.print_info(
+                "Attempting to install GNU grep to satisfy policykit requirements..."
             )
-            if result.returncode != 0 or result.stderr:
-                Logger.print_error(f"{result.stderr}", False)
+            if not self.__ensure_gnu_grep():
                 Logger.print_error("Installing Moonraker policykit rules failed!")
                 return
 
-            Logger.print_ok("Moonraker policykit rules successfully installed!")
+            Logger.print_status("Retrying Moonraker policykit rule installation ...")
+            if self.__run_polkit_script():
+                return
+
+            Logger.print_error("Installing Moonraker policykit rules failed!")
         except CalledProcessError as e:
             log = (
                 f"Error while installing Moonraker policykit rules: {e.stderr.decode()}"
             )
             Logger.print_error(log)
+
+    def __run_polkit_script(self) -> bool:
+        command = [POLKIT_SCRIPT, "--disable-systemctl"]
+        result = run(
+            command,
+            stderr=PIPE,
+            stdout=DEVNULL,
+            text=True,
+        )
+        stderr_output = (result.stderr or "").strip()
+
+        if result.returncode == 0 and not stderr_output:
+            Logger.print_ok("Moonraker policykit rules successfully installed!")
+            return True
+
+        if "unrecognized option: P" in stderr_output or "BusyBox" in stderr_output:
+            Logger.print_warn(
+                "BusyBox grep detected without '-P' support; policykit install requires GNU grep."
+            )
+            return False
+
+        if stderr_output:
+            Logger.print_error(stderr_output, False)
+        return False
+
+    def __ensure_gnu_grep(self) -> bool:
+        manager = get_package_manager()
+        if manager != PackageManager.APK:
+            Logger.print_warn(
+                "Automatic GNU grep installation is only supported on apk-based systems."
+            )
+            return False
+
+        missing_packages = check_package_install({"grep"})
+        if not missing_packages:
+            Logger.print_warn(
+                "GNU grep appears to be installed already. Please ensure BusyBox grep is not shadowing it."
+            )
+            return False
+
+        try:
+            Logger.print_status("Installing GNU grep ...")
+            install_system_packages(missing_packages)
+        except Exception:
+            Logger.print_error("Failed to install GNU grep automatically.")
+            return False
+
+        return True
 
     def __get_instances_to_remove(self) -> List[Moonraker] | None:
         start_index = 1
