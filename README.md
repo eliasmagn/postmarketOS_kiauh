@@ -78,10 +78,15 @@ this document.
 
 * **Step 1:** \
   To download this script, it is necessary to have git installed. If you don't
-  have git already installed, or if you are unsure, run the following command:
+  have git already installed, or if you are unsure, run the command that matches
+  your distribution:
 
 ```shell
+# Debian, Ubuntu, Raspberry Pi OS, ...
 sudo apt-get update && sudo apt-get install git -y
+
+# Alpine Linux / postmarketOS
+sudo apk update && sudo apk add git
 ```
 
 * **Step 2:** \
@@ -117,6 +122,8 @@ changes!**
 - Mainly tested on Raspberry Pi OS Lite (Debian 10 Buster / Debian 11 Bullseye)
     - Other Debian based distributions (like Ubuntu 20 to 22) likely work too
     - Reported to work on Armbian as well but not tested in detail
+- Automatic package manager detection now supports both `apt` and `apk`
+    - This allows running KIAUH on Alpine Linux derivatives such as postmarketOS
 - During the use of this script you will be asked for your sudo password. There
   are several functions involved which need sudo privileges.
 

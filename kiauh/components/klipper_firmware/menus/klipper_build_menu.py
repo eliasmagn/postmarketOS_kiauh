@@ -27,7 +27,9 @@ from core.types.color import Color
 from utils.input_utils import get_confirm, get_string_input
 from utils.sys_utils import (
     check_package_install,
+    get_package_manager,
     install_system_packages,
+    resolve_package_names,
     update_system_package_lists,
 )
 
@@ -133,11 +135,15 @@ class KlipperBuildFirmwareMenu(BaseMenu):
         self.title_color = Color.CYAN
         self.previous_menu: Type[BaseMenu] | None = previous_menu
         self.deps: Set[str] = {"build-essential", "dpkg-dev", "make"}
+        self.package_manager = get_package_manager()
         self.missing_deps: List[str] = check_package_install(self.deps)
         self.flash_options = FlashOptions()
         self.kconfigs_dirname = KLIPPER_KCONFIGS_DIR
         self.kconfig_default = KLIPPER_DIR.joinpath(".config")
         self.kconfig = self.flash_options.selected_kconfig
+        self._resolved_dep_map = {
+            dep: resolve_package_names([dep], self.package_manager) for dep in self.deps
+        }
 
     def set_previous_menu(self, previous_menu: Type[BaseMenu] | None) -> None:
         from core.menus.advanced_menu import AdvancedMenu
@@ -172,7 +178,14 @@ class KlipperBuildFirmwareMenu(BaseMenu):
         for d in self.deps:
             status_ok = Color.apply("*INSTALLED*", Color.GREEN)
             status_missing = Color.apply("*MISSING*", Color.RED)
-            status = status_missing if d in self.missing_deps else status_ok
+            resolved_names = self._resolved_dep_map.get(d, [d])
+            if not isinstance(resolved_names, list):
+                resolved_names = [resolved_names]
+            status = (
+                status_missing
+                if any(name in self.missing_deps for name in resolved_names)
+                else status_ok
+            )
             padding = 40 - len(d) + len(status) + (len(status_ok) - len(status))
             d = Color.apply(f"● {d}", Color.CYAN)
             menu += f"║ {d}{status:>{padding}} ║\n"
