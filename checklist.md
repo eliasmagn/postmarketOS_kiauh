@@ -28,4 +28,4 @@
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.
 - [ ] Coordinate with KlipperScreen maintainers on integrating the Wayland wrapper defaults upstream.
-- [ ] Offer optional WireGuard provisioning so remote access can be secured without manual VPN setup.
+- [x] Offer optional WireGuard provisioning so remote access can be secured without manual VPN setup.
