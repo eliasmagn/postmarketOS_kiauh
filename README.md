@@ -142,7 +142,10 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
 that mirrors the upstream Phosh and Plasma Mobile recommendations while also
-surfacing device-aware display defaults gathered from postmarketOS hardware
+deferring the choice until after you explicitly select the Wayland backend in
+the upstream installer. X11-first setups therefore skip the extra question but
+can rerun the preset helper later if they move to Wayland. When Wayland is
+selected, the prompt surfaces device-aware display defaults gathered from postmarketOS hardware
 probing. KIAUH writes the following artefacts after cloning the KlipperScreen
 repository:
 

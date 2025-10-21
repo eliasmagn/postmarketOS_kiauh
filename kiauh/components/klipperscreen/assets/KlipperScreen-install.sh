@@ -246,6 +246,10 @@ install_graphical_backend()
         fi
     fi
   done
+
+  if [ -n "$KIAUH_BACKEND_TRACK_FILE" ]; then
+    printf '%s\n' "$BACKEND" > "$KIAUH_BACKEND_TRACK_FILE"
+  fi
 }
 
 install_packages()
