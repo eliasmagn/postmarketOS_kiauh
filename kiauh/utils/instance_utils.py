@@ -12,9 +12,9 @@ import re
 from pathlib import Path
 from typing import List
 
-from core.constants import SYSTEMD
 from core.instance_manager.base_instance import SUFFIX_BLACKLIST
 from utils.instance_type import InstanceType
+from utils.sys_utils import get_service_directory
 
 
 def get_instances(
@@ -28,9 +28,13 @@ def get_instances(
     name = convert_camelcase_to_kebabcase(instance_type.__name__)
     pattern = re.compile(f"^{name}(-[0-9a-zA-Z]+)?.service$")
 
+    service_dir = get_service_directory()
+    if not service_dir.exists():
+        return []
+
     service_list = [
-        Path(SYSTEMD, service)
-        for service in SYSTEMD.iterdir()
+        Path(service_dir, service)
+        for service in service_dir.iterdir()
         if pattern.search(service.name)
         and not any(s in service.name for s in suffix_blacklist)
     ]

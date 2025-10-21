@@ -150,7 +150,7 @@ def get_data_dir(instance_type: type, suffix: str) -> Path:
         with open(service_file_path, "r") as service_file:
             lines = service_file.readlines()
             for line in lines:
-                pattern = r"^EnvironmentFile=(.+)(/systemd/.+\.env)"
+                pattern = r"^\s*#?\s*EnvironmentFile=(.+)(/systemd/.+\.env)"
                 match = re.search(pattern, line)
                 if match:
                     return Path(match.group(1))

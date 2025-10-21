@@ -8,6 +8,8 @@
 # ======================================================================= #
 from pathlib import Path
 
+from utils.sys_utils import InitSystem, get_init_system
+
 MODULE_PATH = Path(__file__).resolve().parent
 
 # repo
@@ -28,7 +30,15 @@ OBICO_DIR = Path.home().joinpath("moonraker-obico")
 OBICO_ENV_DIR = Path.home().joinpath("moonraker-obico-env")
 
 # files
-OBICO_SERVICE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{OBICO_SERVICE_NAME}")
+_INIT_SYSTEM = get_init_system()
+if _INIT_SYSTEM == InitSystem.OPENRC:
+    OBICO_SERVICE_TEMPLATE = MODULE_PATH.joinpath(
+        "assets/moonraker-obico.openrc"
+    )
+else:
+    OBICO_SERVICE_TEMPLATE = MODULE_PATH.joinpath(
+        f"assets/{OBICO_SERVICE_NAME}"
+    )
 OBICO_ENV_FILE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{OBICO_ENV_FILE_NAME}")
 OBICO_LINK_SCRIPT = OBICO_DIR.joinpath("scripts/link.sh")
 OBICO_REQ_FILE = OBICO_DIR.joinpath("requirements.txt")

@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+
+description="Moonraker Telegram Bot SV1"
+command="%ENV%/bin/python"
+command_args=""
+command_user="%USER%"
+directory="%TELEGRAM_BOT_DIR%"
+supervisor=supervise-daemon
+respawn_delay=10
+respawn_max=0
+
+# EnvironmentFile=%ENV_FILE%
+
+depend() {
+    need net
+}
+
+start_pre() {
+    if [ -f "%ENV_FILE%" ]; then
+        set -a
+        . "%ENV_FILE%"
+        set +a
+        command_args="${TELEGRAM_BOT_ARGS}"
+    else
+        eerror "Environment file %ENV_FILE% not found"
+        return 1
+    fi
+}

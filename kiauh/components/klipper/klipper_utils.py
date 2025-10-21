@@ -43,7 +43,9 @@ from utils.fs_utils import check_file_exist
 from utils.input_utils import get_confirm, get_number_input, get_string_input
 from utils.instance_utils import get_instances
 from utils.sys_utils import (
+    InitSystem,
     cmd_sysctl_service,
+    get_init_system,
     install_python_packages,
     parse_packages_from_file,
 )
@@ -131,6 +133,12 @@ def check_user_groups() -> None:
 
 
 def handle_disruptive_system_packages() -> None:
+    if get_init_system() != InitSystem.SYSTEMD:
+        Logger.print_info(
+            "Service masking for disruptive packages is only supported on systemd."
+        )
+        return
+
     services = []
 
     command = ["systemctl", "is-enabled", "brltty"]

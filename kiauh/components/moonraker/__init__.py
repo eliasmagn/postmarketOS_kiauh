@@ -9,6 +9,8 @@
 
 from pathlib import Path
 
+from utils.sys_utils import InitSystem, get_init_system
+
 MODULE_PATH = Path(__file__).resolve().parent
 
 MOONRAKER_REPO_URL = "https://github.com/Arksine/moonraker.git"
@@ -36,7 +38,13 @@ POLKIT_LEGACY_FILE = Path("/etc/polkit-1/localauthority/50-local.d/10-moonraker.
 POLKIT_FILE = Path("/etc/polkit-1/rules.d/moonraker.rules")
 POLKIT_USR_FILE = Path("/usr/share/polkit-1/rules.d/moonraker.rules")
 POLKIT_SCRIPT = MOONRAKER_DIR.joinpath("scripts/set-policykit-rules.sh")
-MOONRAKER_SERVICE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{MOONRAKER_SERVICE_NAME}")
+_INIT_SYSTEM = get_init_system()
+if _INIT_SYSTEM == InitSystem.OPENRC:
+    MOONRAKER_SERVICE_TEMPLATE = MODULE_PATH.joinpath("assets/moonraker.openrc")
+else:
+    MOONRAKER_SERVICE_TEMPLATE = MODULE_PATH.joinpath(
+        f"assets/{MOONRAKER_SERVICE_NAME}"
+    )
 MOONRAKER_ENV_FILE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{MOONRAKER_ENV_FILE_NAME}")
 
 

@@ -8,6 +8,8 @@
 # ======================================================================= #
 from pathlib import Path
 
+from utils.sys_utils import InitSystem, get_init_system
+
 MODULE_PATH = Path(__file__).resolve().parent
 
 # repo
@@ -24,6 +26,14 @@ TG_BOT_DIR = Path.home().joinpath("moonraker-telegram-bot")
 TG_BOT_ENV = Path.home().joinpath("moonraker-telegram-bot-env")
 
 # files
-TG_BOT_SERVICE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{TG_BOT_SERVICE_NAME}")
+_INIT_SYSTEM = get_init_system()
+if _INIT_SYSTEM == InitSystem.OPENRC:
+    TG_BOT_SERVICE_TEMPLATE = MODULE_PATH.joinpath(
+        "assets/moonraker-telegram-bot.openrc"
+    )
+else:
+    TG_BOT_SERVICE_TEMPLATE = MODULE_PATH.joinpath(
+        f"assets/{TG_BOT_SERVICE_NAME}"
+    )
 TG_BOT_ENV_FILE_TEMPLATE = MODULE_PATH.joinpath(f"assets/{TG_BOT_ENV_FILE_NAME}")
 TG_BOT_REQ_FILE = TG_BOT_DIR.joinpath("scripts/requirements.txt")

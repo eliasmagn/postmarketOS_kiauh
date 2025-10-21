@@ -8,7 +8,7 @@
 # ======================================================================= #
 from pathlib import Path
 
-from core.constants import SYSTEMD
+from utils.sys_utils import get_service_directory
 
 # repo
 KLIPPERSCREEN_REPO = "https://github.com/KlipperScreen/KlipperScreen.git"
@@ -29,4 +29,4 @@ KLIPPERSCREEN_REQ_FILE = KLIPPERSCREEN_DIR.joinpath(
 KLIPPERSCREEN_INSTALL_SCRIPT = KLIPPERSCREEN_DIR.joinpath(
     "scripts/KlipperScreen-install.sh"
 )
-KLIPPERSCREEN_SERVICE_FILE = SYSTEMD.joinpath(KLIPPERSCREEN_SERVICE_NAME)
+KLIPPERSCREEN_SERVICE_FILE = get_service_directory().joinpath(KLIPPERSCREEN_SERVICE_NAME)

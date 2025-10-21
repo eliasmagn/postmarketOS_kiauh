@@ -22,7 +22,12 @@ from extensions.octoprint import (
     OP_LOG_NAME,
 )
 from utils.fs_utils import create_folders
-from utils.sys_utils import create_service_file, get_service_file_path
+from utils.sys_utils import (
+    InitSystem,
+    create_service_file,
+    get_init_system,
+    get_service_file_path,
+)
 
 
 @dataclass
@@ -76,6 +81,30 @@ class Octoprint:
         basedir = self.basedir.as_posix()
         cfg = self.cfg_file.as_posix()
         octo_exec = self.env_dir.joinpath("bin/octoprint").as_posix()
+        if get_init_system() == InitSystem.OPENRC:
+            return dedent(
+                f"""\
+                #!/sbin/openrc-run
+
+                description="Starts OctoPrint on startup"
+                command="{octo_exec}"
+                command_args="--basedir {basedir} --config {cfg} --port={port} serve"
+                command_user="{CURRENT_USER}"
+                directory="{basedir}"
+                supervisor=supervise-daemon
+                respawn_delay=10
+                respawn_max=0
+
+                depend() {{
+                    need net
+                }}
+
+                start_pre() {{
+                    export LC_ALL=C.UTF-8
+                    export LANG=C.UTF-8
+                }}
+                """
+            )
 
         return dedent(
             f"""\
