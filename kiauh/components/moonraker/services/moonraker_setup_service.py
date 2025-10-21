@@ -34,7 +34,9 @@ from components.moonraker.services.moonraker_instance_service import (
 )
 from components.moonraker.utils.utils import (
     backup_moonraker_dir,
+    configure_apk_update_manager,
     create_example_moonraker_conf,
+    disable_system_updates,
     install_moonraker_packages,
     remove_polkit_rules,
 )
@@ -65,6 +67,7 @@ from utils.sys_utils import (
     create_python_venv,
     get_ipv4_addr,
     get_package_manager,
+    has_package_equivalent,
     install_python_requirements,
     install_system_packages,
     unit_file_exists,
@@ -347,6 +350,21 @@ class MoonrakerSetupService:
 
     def __install_polkit(self) -> None:
         Logger.print_status("Installing Moonraker policykit rules ...")
+
+        manager = get_package_manager()
+        if manager == PackageManager.APK:
+            if not configure_apk_update_manager(self.moonraker_list):
+                Logger.print_warn(
+                    "Failed to install the apk-based Moonraker update manager drop-in. "
+                    "System package updates may be unavailable."
+                )
+        elif not has_package_equivalent("packagekit", manager):
+            Logger.print_info(
+                "PackageKit is unavailable on this platform; skipping Moonraker "
+                "policykit rule installation."
+            )
+            disable_system_updates(self.moonraker_list)
+            return
 
         legacy_file_exists = check_file_exist(POLKIT_LEGACY_FILE, True)
         polkit_file_exists = check_file_exist(POLKIT_FILE, True)

@@ -142,6 +142,28 @@ PACKAGE_TRANSLATIONS = {
 _UNAVAILABLE_PACKAGE_WARNINGS: Set[tuple[PackageManager, str]] = set()
 
 
+def has_package_equivalent(
+    package: str, manager: PackageManager | None = None
+) -> bool:
+    """Return True when the requested package can be resolved for the manager."""
+
+    if manager is None:
+        manager = get_package_manager()
+
+    translations = PACKAGE_TRANSLATIONS.get(manager, {})
+    if package not in translations:
+        return True
+
+    mapped = translations[package]
+    if mapped is None:
+        return False
+
+    if isinstance(mapped, (list, tuple, set)):
+        return all(item for item in mapped)
+
+    return bool(mapped)
+
+
 def resolve_package_names(packages: Iterable[str], manager: PackageManager) -> List[str]:
     translations = PACKAGE_TRANSLATIONS.get(manager, {})
     resolved: List[str] = []

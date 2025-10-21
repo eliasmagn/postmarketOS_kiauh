@@ -30,13 +30,23 @@ from core.submodules.simple_config_parser.src.simple_config_parser.simple_config
 )
 from core.types.component_status import ComponentStatus
 from utils.common import check_install_dependencies, get_install_status
+from utils.fs_utils import create_symlink, remove_with_sudo
 from utils.instance_utils import get_instances
 from utils.sys_utils import (
     PackageManager,
     get_ipv4_addr,
     get_package_manager,
+    has_package_equivalent,
     parse_packages_from_file,
 )
+
+
+APK_UPDATE_WRAPPER = MODULE_PATH.joinpath("assets/apk-update-manager-wrapper.py")
+APK_UPDATE_TARGET = Path("/usr/local/lib/moonraker/apk-apt-wrapper")
+APK_UPDATE_LINKS = {
+    name: Path("/usr/local/bin").joinpath(name)
+    for name in ("apt", "apt-get", "apt-cache")
+}
 
 
 def get_moonraker_status() -> ComponentStatus:
@@ -84,6 +94,66 @@ def install_moonraker_packages() -> None:
     check_install_dependencies({*moonraker_deps})
 
 
+def _sudo_run(command: List[str], error_message: str) -> bool:
+    try:
+        run(command, stderr=PIPE, stdout=DEVNULL, check=True)
+    except CalledProcessError as exc:
+        stderr = (exc.stderr or b"").decode().strip()
+        if stderr:
+            error_message = f"{error_message}: {stderr}"
+        Logger.print_error(error_message)
+        return False
+    return True
+
+
+def ensure_apk_update_manager_dropin() -> bool:
+    manager = get_package_manager()
+    if manager != PackageManager.APK:
+        return False
+
+    if not APK_UPDATE_WRAPPER.exists():
+        Logger.print_error(
+            "Moonraker apk update manager wrapper is missing from the assets directory."
+        )
+        return False
+
+    target_dir = APK_UPDATE_TARGET.parent
+    if not _sudo_run(["sudo", "mkdir", "-p", target_dir.as_posix()], "Failed to create drop-in directory"):
+        return False
+    if not _sudo_run(
+        ["sudo", "cp", "-f", APK_UPDATE_WRAPPER.as_posix(), APK_UPDATE_TARGET.as_posix()],
+        "Failed to install apk update manager wrapper",
+    ):
+        return False
+    if not _sudo_run(
+        ["sudo", "chmod", "0755", APK_UPDATE_TARGET.as_posix()],
+        "Failed to adjust apk update manager wrapper permissions",
+    ):
+        return False
+
+    installed_links = True
+    for link in APK_UPDATE_LINKS.values():
+        try:
+            create_symlink(APK_UPDATE_TARGET, link, sudo=True)
+        except CalledProcessError as exc:
+            Logger.print_error(f"Failed to create symlink for {link.name}: {exc}")
+            installed_links = False
+    if not installed_links:
+        return False
+
+    Logger.print_ok("Installed apk compatibility wrappers for Moonraker system updates.")
+    return True
+
+
+def remove_apk_update_manager_dropin() -> None:
+    manager = get_package_manager()
+    if manager != PackageManager.APK:
+        return
+
+    remove_with_sudo(list(APK_UPDATE_LINKS.values()))
+    remove_with_sudo(APK_UPDATE_TARGET)
+
+
 def remove_polkit_rules() -> bool:
     if not MOONRAKER_DIR.exists():
         log = "Cannot remove policykit rules. Moonraker directory not found."
@@ -93,6 +163,8 @@ def remove_polkit_rules() -> bool:
     try:
         cmd = [f"{MOONRAKER_DIR}/scripts/set-policykit-rules.sh", "--clear"]
         run(cmd, stderr=PIPE, stdout=DEVNULL, check=True)
+        if get_package_manager() == PackageManager.APK:
+            remove_apk_update_manager_dropin()
         return True
     except CalledProcessError as e:
         Logger.print_error(f"Error while removing policykit rules: {e}")
@@ -149,6 +221,19 @@ def create_example_moonraker_conf(
     scp.set_option("server", "klippy_uds_address", str(uds))
     scp.set_option("authorization", "trusted_clients", trusted_clients)
 
+    manager = get_package_manager()
+    if manager == PackageManager.APK:
+        Logger.print_info(
+            "Configuring Moonraker to use the apk compatibility drop-in for system updates."
+        )
+        scp.set_option("update_manager", "enable_packagekit", "False")
+    elif not has_package_equivalent("packagekit", manager):
+        Logger.print_info(
+            "PackageKit is unavailable on this platform; Moonraker system updates "
+            "will be disabled in the generated configuration."
+        )
+        scp.set_option("update_manager", "enable_system_updates", "False")
+
     # add existing client and client configs in the update section
     if clients is not None and len(clients) > 0:
         for c in clients:
@@ -180,7 +265,84 @@ def create_example_moonraker_conf(
                     scp.set_option(c_config_section, option[0], option[1])
 
     scp.write_file(target)
+    if manager == PackageManager.APK:
+        configure_apk_update_manager([instance])
     Logger.print_ok(f"Example moonraker.conf created in '{instance.base.cfg_dir}'")
+
+
+def configure_apk_update_manager(
+    instances: Optional[List[Moonraker]] = None,
+) -> bool:
+    manager = get_package_manager()
+    if manager != PackageManager.APK:
+        return False
+
+    if not ensure_apk_update_manager_dropin():
+        return False
+
+    if not instances:
+        instances = get_instances(Moonraker)
+
+    if not instances:
+        return True
+
+    updated_any = False
+    for instance in instances:
+        cfg_path = instance.cfg_file
+        if not cfg_path.exists():
+            continue
+
+        scp = SimpleConfigParser()
+        scp.read_file(cfg_path)
+        updated = False
+        if scp.getval("update_manager", "enable_system_updates", fallback="True") == "False":
+            scp.set_option("update_manager", "enable_system_updates", "True")
+            updated = True
+        if scp.getval("update_manager", "enable_packagekit", fallback="True") != "False":
+            scp.set_option("update_manager", "enable_packagekit", "False")
+            updated = True
+
+        if updated:
+            scp.write_file(cfg_path)
+            updated_any = True
+
+    if updated_any:
+        Logger.print_info(
+            "Configured Moonraker to use apk-backed system updates via the apt compatibility drop-in."
+        )
+
+    return True
+
+
+def disable_system_updates(instances: Optional[List[Moonraker]] = None) -> None:
+    manager = get_package_manager()
+    if manager == PackageManager.APK or has_package_equivalent("packagekit", manager):
+        return
+
+    if not instances:
+        instances = get_instances(Moonraker)
+
+    if not instances:
+        return
+
+    updated = False
+    for instance in instances:
+        cfg_path = instance.cfg_file
+        if not cfg_path.exists():
+            continue
+
+        scp = SimpleConfigParser()
+        scp.read_file(cfg_path)
+        if scp.getval("update_manager", "enable_system_updates", fallback="True") == "False":
+            continue
+        scp.set_option("update_manager", "enable_system_updates", "False")
+        scp.write_file(cfg_path)
+        updated = True
+
+    if updated:
+        Logger.print_info(
+            "Moonraker system update provider disabled because PackageKit is not available on this platform."
+        )
 
 
 def backup_moonraker_dir() -> None:

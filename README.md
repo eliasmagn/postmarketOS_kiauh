@@ -321,6 +321,8 @@ that you can plan any manual workarounds.
 
 > ✅ **BusyBox-friendly policykit install** – postmarketOS ships BusyBox utilities whose `grep` lacks the `-P` flag used by Moonraker's policykit script. When that happens KIAUH now installs GNU `grep` automatically on apk-based systems and retries the helper so the policykit rules land correctly.
 
+> 🧩 **PackageKit-free system updates** – Alpine/postmarketOS mirrors do not ship PackageKit, so KIAUH now installs an apt-compatible drop-in backed by `apk`, leaves Moonraker's policykit helper in place, and keeps the Update Manager's system provider working without warning banners.
+
 #### Crowsnest core installer (`tools/libs/pkglist-generic.sh`)
 
 | Debian package     | Alpine package(s)           |
