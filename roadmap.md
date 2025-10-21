@@ -21,6 +21,7 @@
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
 - ✅ Offer guided nftables allow-rule prompts for Moonraker and web UIs with selectable network scopes on nftables-enabled hosts.
+- ✅ Provide an apk-aware crowsnest deployment that renders config templates and installs an OpenRC service so Fluidd/Mainsail webcams stream on postmarketOS.
 - ✅ Offer optional WireGuard provisioning so remote access can ride an encrypted tunnel alongside the nftables automation.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
