@@ -11,6 +11,7 @@
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
 - [x] Gate Moonraker update-manager's `managed_services` stanza behind the selected KlipperScreen autostart backend.
+- [x] Teach the Moonraker dependency parser to reuse the Debian list when apk-based systems lack a dedicated entry and translate it on the fly.
 - [x] Document postmarketOS-specific prerequisites for the init-service abstraction and Wayland presets in the README.
 - [x] Defer the Wayland preset prompt until after the backend choice so X11 installs no longer see the question prematurely.
 - [x] Default the KlipperScreen installer to the minimal dependency set and gate optional extras behind an explicit opt-in.
