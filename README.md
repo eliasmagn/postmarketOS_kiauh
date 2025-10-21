@@ -148,6 +148,12 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 
+### 🔒 nftables firewall integration
+
+- When the helper detects the `nft` binary it now inspects the default `inet filter input` chain and offers to add allow rules for Moonraker and NGINX-hosted web UIs (Fluidd, Mainsail, etc.). Fresh installs only prompt when the target port is missing so existing firewall policies remain untouched.
+- The dialog lets you keep the listener open to the world, restrict it to the automatically detected local subnets, or enter a custom comma-separated list of CIDR ranges/hosts. IPv4 and IPv6 prefixes are supported.
+- Reconfiguring a web UI port through the installation menu re-runs the firewall helper so the nftables rule stays in sync without manual edits. You can always skip the automation and adjust rules manually if you prefer.
+
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
