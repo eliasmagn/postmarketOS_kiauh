@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from contextlib import contextmanager
 import textwrap
 import traceback
 from abc import abstractmethod
@@ -179,6 +180,20 @@ class BaseMenu(metaclass=PostInitCaller):
         else:
             self.spinner.stop()
             self.spinner = None
+
+    @contextmanager
+    def pause_loading(self):
+        spinner = self.spinner
+        was_active = spinner is not None
+        if was_active:
+            spinner.stop()
+            sys.stdout.write("\r")
+            sys.stdout.flush()
+        try:
+            yield
+        finally:
+            if was_active:
+                spinner.start()
 
     def __print_menu_title(self) -> None:
         count = 62 - len(str(self.title_color)) - len(str(Color.RST))
