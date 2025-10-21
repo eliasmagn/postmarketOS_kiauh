@@ -132,6 +132,12 @@ the following artefacts after cloning the KlipperScreen repository:
   `KlipperScreen-start.sh`.
 - A `.desktop` entry in `~/.local/share/applications/` so Phosh/Plasma launchers
   can spawn KlipperScreen with the expected Wayland flags.
+- When a Phosh or Plasma Mobile session is detected at install time, a matching
+  autostart entry is written to `~/.config/autostart/` so the wrapper launches
+  automatically on login.
+- On OpenRC consoles without a graphical shell, a login snippet in
+  `~/.config/profile.d/` waits for Moonraker to respond before spawning
+  KlipperScreen.
 - Either a `systemd --user` service or an OpenRC user service stub, depending on
   the host init system, pointing to the wrapper.
 
@@ -147,6 +153,11 @@ runlevel (for example `~/.config/openrc/runlevels/default/`).
 The launcher presets are additive—the existing system instance managed by KIAUH
 remains untouched—so you can try the Wayland session without disrupting the
 original install.
+
+When KlipperScreen runs as a user-managed service (systemd `--user`, OpenRC
+user units, or the login hook above) Moonraker's update-manager entry skips the
+`managed_services` stanza so non-systemd autostart strategies remain unaffected
+by future updates.
 
 ### 🖥️ Auto-generated KlipperScreen.conf defaults
 
