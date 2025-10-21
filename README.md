@@ -175,6 +175,7 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - When the helper detects the `nft` binary it now inspects the default `inet filter input` chain and offers to add allow rules for Moonraker and NGINX-hosted web UIs (Fluidd, Mainsail, etc.). Fresh installs only prompt when the target port is missing so existing firewall policies remain untouched.
 - The dialog lets you keep the listener open to the world, restrict it to the automatically detected local subnets, or enter a custom comma-separated list of CIDR ranges/hosts. IPv4 and IPv6 prefixes are supported.
 - Reconfiguring a web UI port through the installation menu re-runs the firewall helper so the nftables rule stays in sync without manual edits. You can always skip the automation and adjust rules manually if you prefer.
+- When the default `inet filter input` chain is missing, the helper now surfaces a follow-up warning that links to the [postmarketOS firewall guide](https://wiki.postmarketos.org/wiki/Firewall) so you know where to add rules manually before continuing.
 
 ### 🔐 WireGuard provisioning
 
