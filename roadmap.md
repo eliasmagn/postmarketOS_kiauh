@@ -25,6 +25,7 @@
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
 - ✅ Ship an apt-compatible Moonraker update-manager drop-in on apk-based systems so the Update Manager works without PackageKit while keeping the policykit helper intact and warning-free.
 - ✅ Offer guided nftables allow-rule prompts for Moonraker and web UIs with selectable network scopes on nftables-enabled hosts.
+- ✅ Add explicit fallback messaging for missing nftables input chains so users know to reference the postmarketOS firewall documentation before adjusting rules manually.
 - ✅ Provide an apk-aware crowsnest deployment that renders config templates and installs an OpenRC service so Fluidd/Mainsail webcams stream on postmarketOS.
 - ✅ Offer optional WireGuard provisioning so remote access can ride an encrypted tunnel alongside the nftables automation.
 - ✅ Pause spinner-driven loading messages whenever sudo interactions are required so update prompts stay visible to the user.

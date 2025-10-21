@@ -268,10 +268,21 @@ def _list_input_chain() -> Optional[str]:
         result = run(NFT_CHAIN_CMD, stdout=PIPE, stderr=PIPE, text=True, check=True)
         return result.stdout
     except CalledProcessError as exc:
+        stderr = exc.stderr.strip() if exc.stderr else str(exc)
         Logger.print_warn(
             "Could not inspect nftables input chain: "
-            f"{exc.stderr.strip() if exc.stderr else exc}" 
+            f"{stderr}"
         )
+        Logger.print_warn(
+            "Unable to inspect the default nftables input chain. "
+            "Please adjust your firewall rules manually if needed."
+        )
+        if "No such file or directory" in stderr or "does not exist" in stderr:
+            Logger.print_info(
+                "The default nftables filter/input chain is missing. "
+                "Refer to https://wiki.postmarketos.org/wiki/Firewall for manual "
+                "configuration guidance."
+            )
     except FileNotFoundError:
         Logger.print_warn("nft command not available on this system.")
     return None
