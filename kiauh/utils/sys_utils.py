@@ -62,26 +62,77 @@ def get_package_manager() -> PackageManager:
 
 PACKAGE_TRANSLATIONS = {
     PackageManager.APK: {
-        "python3-virtualenv": "py3-virtualenv",
-        "python3-pip": "py3-pip",
-        "python3-dev": "python3-dev",
-        "python3-setuptools": "py3-setuptools",
-        "python3-numpy": "py3-numpy",
-        "python3-matplotlib": "py3-matplotlib",
-        "libatlas-base-dev": "atlas-dev",
-        "libopenblas-dev": "openblas-dev",
-        "libyaml-dev": "yaml-dev",
+        "avr-libc": "avr-libc",
+        "avrdude": "avrdude",
+        "binutils-arm-none-eabi": "arm-none-eabi-binutils",
+        "binutils-avr": "avr-binutils",
         "build-essential": "build-base",
+        "bsdutils": "util-linux",
+        "cmake": "cmake",
+        "crudini": "crudini",
         "dpkg-dev": "dpkg",
+        "gcc-arm-none-eabi": "arm-none-eabi-gcc",
+        "gcc-avr": "avr-gcc",
+        "iw": "iw",
+        "libatlas-base-dev": "atlas-dev",
+        "libavcodec-dev": "ffmpeg-dev",
+        "libavformat-dev": "ffmpeg-dev",
+        "libavutil-dev": "ffmpeg-dev",
+        "libbsd-dev": "libbsd-dev",
+        "libcamera-apps-lite": None,
+        "libcamera-dev": ["libcamera", "libcamera-dev"],
+        "libevent-dev": ["libevent", "libevent-dev"],
+        "libffi-dev": "libffi-dev",
+        "libjpeg-dev": "libjpeg-turbo-dev",
+        "liblivemedia-dev": ["live555", "live555-dev"],
+        "libncurses-dev": "ncurses-dev",
+        "libnewlib-arm-none-eabi": "newlib-arm-none-eabi",
+        "libopenblas-dev": "openblas-dev",
+        "libopenjp2-7": "openjpeg",
+        "libusb-1.0": "libusb",
+        "libusb-dev": "libusb-dev",
+        "libyaml-dev": "yaml-dev",
+        "libsodium-dev": "libsodium-dev",
+        "libssl-dev": "openssl-dev",
+        "make": "make",
+        "packagekit": None,
+        "pkg-config": "pkgconf",
+        "python3-dev": "python3-dev",
+        "python3-libcamera": "py3-libcamera",
+        "python3-matplotlib": "py3-matplotlib",
+        "python3-numpy": "py3-numpy",
+        "python3-pip": "py3-pip",
+        "python3-setuptools": "py3-setuptools",
+        "python3-virtualenv": "py3-virtualenv",
+        "stm32flash": "stm32flash",
+        "virtualenv": "py3-virtualenv",
+        "v4l-utils": "v4l-utils",
+        "wireless-tools": "wireless-tools",
+        "xxd": "xxd",
+        "zlib1g-dev": "zlib-dev",
     }
 }
+
+_UNAVAILABLE_PACKAGE_WARNINGS: Set[tuple[PackageManager, str]] = set()
 
 
 def resolve_package_names(packages: Iterable[str], manager: PackageManager) -> List[str]:
     translations = PACKAGE_TRANSLATIONS.get(manager, {})
     resolved: List[str] = []
     for package in packages:
-        mapped = translations.get(package, package)
+        if package in translations:
+            mapped = translations[package]
+            if mapped is None:
+                warning_key = (manager, package)
+                if warning_key not in _UNAVAILABLE_PACKAGE_WARNINGS:
+                    Logger.print_warn(
+                        f"No {manager.value} equivalent available for package '{package}'. Skipping."
+                    )
+                    _UNAVAILABLE_PACKAGE_WARNINGS.add(warning_key)
+                continue
+        else:
+            mapped = package
+
         if isinstance(mapped, (list, tuple, set)):
             for item in mapped:
                 if item not in resolved:
