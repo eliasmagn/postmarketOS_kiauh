@@ -23,6 +23,7 @@
 - [x] Ensure freshly generated `printer.cfg` examples include the installed Mainsail/Fluidd configs by correctly detecting existing web UI directories.
 - [x] Detect missing `grep -P` support on BusyBox-based systems, install GNU `grep`, and retry the Moonraker policykit helper automatically.
 - [x] Detect nftables firewalls and offer guided allow-rule creation for Moonraker and web UI ports with selectable network scopes.
+- [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.
