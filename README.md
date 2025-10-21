@@ -173,6 +173,12 @@ The launcher presets are additive—the existing system instance managed by KIAU
 remains untouched—so you can try the Wayland session without disrupting the
 original install.
 
+### 🪟 X11 remains a first-class option on postmarketOS
+
+- When the helper detects an Alpine/postmarketOS environment it now swaps the upstream KlipperScreen installer with an apk-aware wrapper before execution. The wrapper mirrors the original prompts but resolves dependency installation through `apk` (or `doas` when `sudo` is absent) so X11 packages install cleanly.
+- The translated dependency set covers the classic Xorg stack (`xorg-server`, `xf86-input-libinput`, `xf86-video-fbdev`, `xset`, etc.) as well as the Wayland kiosk trio. Users can therefore continue accepting the default X11 backend even on phones where Wayland is not yet stable.
+- Systems booted with OpenRC automatically skip systemd unit creation while still provisioning the graphical backend packages, letting the downstream OpenRC autostart integration take over.
+
 When KlipperScreen runs as a user-managed service (systemd `--user`, OpenRC
 user units, or the login hook above) Moonraker's update-manager entry skips the
 `managed_services` stanza so non-systemd autostart strategies remain unaffected

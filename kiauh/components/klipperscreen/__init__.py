@@ -29,4 +29,7 @@ KLIPPERSCREEN_REQ_FILE = KLIPPERSCREEN_DIR.joinpath(
 KLIPPERSCREEN_INSTALL_SCRIPT = KLIPPERSCREEN_DIR.joinpath(
     "scripts/KlipperScreen-install.sh"
 )
+KLIPPERSCREEN_INSTALL_SCRIPT_ASSET = Path(__file__).parent.joinpath(
+    "assets/KlipperScreen-install.sh"
+)
 KLIPPERSCREEN_SERVICE_FILE = get_service_directory().joinpath(KLIPPERSCREEN_SERVICE_NAME)
