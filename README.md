@@ -149,6 +149,10 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 - When an expected site definition is missing entirely, the menu falls back to the saved default port instead of crashing so you can still reinstall or reconfigure the client.
 
+### 🧩 Web UI config hand-off
+
+- When KIAUH seeds a fresh `printer.cfg` for new Klipper instances it now re-checks for installed Mainsail/Fluidd directories and automatically adds the matching `include` statements. The generated example therefore keeps your dashboards reachable immediately after installation, even on systems that install the web UIs before Klipper.
+
 ### 🔒 nftables firewall integration
 
 - When the helper detects the `nft` binary it now inspects the default `inet filter input` chain and offers to add allow rules for Moonraker and NGINX-hosted web UIs (Fluidd, Mainsail, etc.). Fresh installs only prompt when the target port is missing so existing firewall policies remain untouched.

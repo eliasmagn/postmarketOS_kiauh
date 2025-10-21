@@ -20,6 +20,7 @@
 - [x] Default the KlipperScreen installer to the minimal dependency set and gate optional extras behind an explicit opt-in.
 - [x] Replace KlipperScreen's NetworkManager install reboot with a manual reminder so unattended runs exit cleanly.
 - [x] Detect NGINX configuration directory variants so web UIs install cleanly on Alpine/postmarketOS hosts.
+- [x] Ensure freshly generated `printer.cfg` examples include the installed Mainsail/Fluidd configs by correctly detecting existing web UI directories.
 - [x] Detect missing `grep -P` support on BusyBox-based systems, install GNU `grep`, and retry the Moonraker policykit helper automatically.
 - [x] Detect nftables firewalls and offer guided allow-rule creation for Moonraker and web UI ports with selectable network scopes.
 - [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.
