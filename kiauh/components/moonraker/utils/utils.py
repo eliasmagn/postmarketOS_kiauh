@@ -32,7 +32,9 @@ from core.types.component_status import ComponentStatus
 from utils.common import check_install_dependencies, get_install_status
 from utils.instance_utils import get_instances
 from utils.sys_utils import (
+    PackageManager,
     get_ipv4_addr,
+    get_package_manager,
     parse_packages_from_file,
 )
 
@@ -44,7 +46,9 @@ def get_moonraker_status() -> ComponentStatus:
 def install_moonraker_packages() -> None:
     Logger.print_status("Parsing Moonraker system dependencies  ...")
 
-    moonraker_deps = []
+    moonraker_deps: List[str] = []
+    sysdeps: Dict[str, List[str]] = {}
+    parser: SysDepsParser | None = None
     if MOONRAKER_DEPS_JSON_FILE.exists():
         Logger.print_info(
             f"Parsing system dependencies from {MOONRAKER_DEPS_JSON_FILE.name} ..."
@@ -59,6 +63,20 @@ def install_moonraker_packages() -> None:
             f"Parsing system dependencies from {MOONRAKER_INSTALL_SCRIPT.name} ..."
         )
         moonraker_deps = parse_packages_from_file(MOONRAKER_INSTALL_SCRIPT)
+
+    if not moonraker_deps and sysdeps:
+        manager = get_package_manager()
+        if (
+            manager == PackageManager.APK
+            and parser is not None
+            and "debian" in sysdeps
+        ):
+            Logger.print_warn(
+                "Moonraker's system-dependencies.json does not define a postmarketOS/"
+                "Alpine section. Reusing the Debian dependency list and translating it "
+                "for apk."
+            )
+            moonraker_deps = sysdeps["debian"]
 
     if not moonraker_deps:
         raise ValueError("Error parsing Moonraker dependencies!")
