@@ -68,6 +68,7 @@ If you are deploying KIAUH on a phone or tablet that ships with postmarketOS, ma
 
 - Flash a recent `postmarketos-base` rootfs and enable SSH or USB networking (`pmbootstrap install --ssh`).
 - Install one of the touch UIs (`postmarketos-ui-phosh` or `postmarketos-ui-plasma-mobile`) so the Wayland presets have an available session.
+- Sxmo users should keep `sxmo-utils` installed—the helper mirrors its wlroots environment exports when generating the KlipperScreen launcher.
 - Ensure the main user belongs to the `video`, `input`, and `plugdev` groups so KlipperScreen inherits display and input permissions.
 - Start the seat management service after the first boot (`rc-update add seatd default && rc-service seatd start`) because the KlipperScreen Wayland wrapper relies on it.
 - Keep the vendor-specific DRM or DSI panel drivers enabled; the display preset generator reads them to pre-seed orientation hints.
@@ -143,7 +144,7 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
-that mirrors the upstream Phosh and Plasma Mobile recommendations while also
+that mirrors the upstream Phosh, Plasma Mobile, and Sxmo recommendations while also
 deferring the choice until after you explicitly select the Wayland backend in
 the upstream installer. X11-first setups therefore skip the extra question but
 can rerun the preset helper later if they move to Wayland. When Wayland is
@@ -164,6 +165,9 @@ repository:
   KlipperScreen.
 - Either a `systemd --user` service or an OpenRC user service stub, depending on
   the host init system, pointing to the wrapper.
+- Sxmo environments receive the same wlroots variables the upstream `sxmo-utils`
+  package exports, ensuring Qualcomm msm8953 reference images can launch
+  KlipperScreen without additional wrappers.
 
 Systemd users can enable the service immediately:
 
