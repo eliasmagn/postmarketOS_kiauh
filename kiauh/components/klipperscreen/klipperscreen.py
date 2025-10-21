@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
 from subprocess import CalledProcessError, run
 from textwrap import dedent
@@ -64,6 +65,28 @@ class WaylandPreset:
     description: str
     env: Dict[str, str]
     notes: List[str]
+
+
+class AutostartBackend(Enum):
+    NONE = auto()
+    SYSTEMD_USER = auto()
+    OPENRC = auto()
+
+
+@dataclass
+class AutostartResult:
+    preset: WaylandPreset
+    wrapper_path: Path
+    desktop_entry: Path
+    backend: AutostartBackend = AutostartBackend.NONE
+    backend_path: Optional[Path] = None
+    autostart_entry: Optional[Path] = None
+    login_snippet: Optional[Path] = None
+    profile_injection: Optional[Path] = None
+
+    @property
+    def uses_user_autostart(self) -> bool:
+        return self.backend is not AutostartBackend.NONE or self.login_snippet is not None
 
 
 @dataclass
@@ -157,20 +180,71 @@ def prompt_wayland_preset() -> Optional[WaylandPreset]:
     return WAYLAND_PRESETS[selection]
 
 
-def configure_wayland_launchers(preset: WaylandPreset) -> None:
+def configure_wayland_launchers(preset: WaylandPreset) -> AutostartResult:
     try:
-        wrapper_path = _write_wayland_wrapper(preset)
-        _write_desktop_entry(wrapper_path, preset)
-        _write_user_service(wrapper_path, preset)
+        result = _configure_wayland_launchers_internal(preset)
         Logger.print_ok(
-            "Wayland launchers created in ~/.local/share/applications and ~/.config/systemd/user."
+            "Wayland launchers created in ~/.local/share/applications."
         )
+        if result.backend is AutostartBackend.SYSTEMD_USER and result.backend_path is not None:
+            Logger.print_info(
+                "Systemd user service stored in ~/.config/systemd/user. Enable it with "
+                f"'systemctl --user enable --now {result.backend_path.name}'."
+            )
+        elif result.backend is AutostartBackend.OPENRC and result.backend_path is not None:
+            Logger.print_info(
+                "OpenRC user service stub created under ~/.config/openrc/init.d (add it "
+                "with rc-update to run automatically)."
+            )
+        if result.autostart_entry is not None:
+            Logger.print_info(
+                "Autostart desktop entry written to ~/.config/autostart for the "
+                "detected mobile shell."
+            )
+        if result.login_snippet is not None:
+            Logger.print_info(
+                "Login shell snippet stored under ~/.config/profile.d to start "
+                "KlipperScreen after Moonraker is reachable."
+            )
+            if result.profile_injection is not None:
+                Logger.print_info(
+                    f"Ensured {result.profile_injection} sources ~/.config/profile.d/*.sh."
+                )
+        return result
     except Exception as err:  # pragma: no cover - defensive logging only
         Logger.print_warn(
             "Failed to create Wayland launcher helpers. You can re-run the preset from the "
             "KlipperScreen installer menu."
         )
         Logger.print_error(str(err))
+        raise
+
+
+def _configure_wayland_launchers_internal(preset: WaylandPreset) -> AutostartResult:
+    wrapper_path = _write_wayland_wrapper(preset)
+    desktop_path = _write_desktop_entry(wrapper_path, preset)
+    service_result = _write_user_service(wrapper_path, preset)
+
+    autostart_entry: Optional[Path] = None
+    login_snippet: Optional[Path] = None
+    profile_injection: Optional[Path] = None
+
+    detected_shell = _detect_mobile_shell()
+    if detected_shell and _shell_matches_preset(detected_shell, preset):
+        autostart_entry = _write_autostart_entry(wrapper_path, preset, detected_shell)
+    elif service_result.backend is AutostartBackend.OPENRC and detected_shell is None:
+        login_snippet, profile_injection = _write_login_shell_snippet(wrapper_path, preset)
+
+    return AutostartResult(
+        preset=preset,
+        wrapper_path=wrapper_path,
+        desktop_entry=desktop_path,
+        backend=service_result.backend,
+        backend_path=service_result.path,
+        autostart_entry=autostart_entry,
+        login_snippet=login_snippet,
+        profile_injection=profile_injection,
+    )
 
 
 def _write_wayland_wrapper(preset: WaylandPreset) -> Path:
@@ -206,7 +280,7 @@ def _write_wayland_wrapper(preset: WaylandPreset) -> Path:
     return wrapper_path
 
 
-def _write_desktop_entry(wrapper_path: Path, preset: WaylandPreset) -> None:
+def _write_desktop_entry(wrapper_path: Path, preset: WaylandPreset) -> Path:
     desktop_dir = Path.home().joinpath(".local/share/applications")
     desktop_dir.mkdir(parents=True, exist_ok=True)
     desktop_path = desktop_dir.joinpath(
@@ -230,20 +304,30 @@ def _write_desktop_entry(wrapper_path: Path, preset: WaylandPreset) -> None:
     desktop_path.write_text(desktop_content + "\n", encoding="utf-8")
     Logger.print_info(f"Desktop entry stored at {desktop_path}")
 
+    return desktop_path
 
-def _write_user_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+
+@dataclass
+class _ServiceResult:
+    backend: AutostartBackend
+    path: Optional[Path]
+
+
+def _write_user_service(wrapper_path: Path, preset: WaylandPreset) -> _ServiceResult:
     init_system = detect_init_system()
     if init_system == InitSystem.OPENRC:
-        _write_openrc_service(wrapper_path, preset)
-    elif init_system == InitSystem.SYSTEMD:
-        _write_systemd_user_service(wrapper_path, preset)
-    else:
-        Logger.print_warn(
-            "Unsupported init system for user services; generated desktop entry only."
-        )
+        path = _write_openrc_service(wrapper_path, preset)
+        return _ServiceResult(AutostartBackend.OPENRC, path)
+    if init_system == InitSystem.SYSTEMD:
+        path = _write_systemd_user_service(wrapper_path, preset)
+        return _ServiceResult(AutostartBackend.SYSTEMD_USER, path)
+    Logger.print_warn(
+        "Unsupported init system for user services; generated desktop entry only."
+    )
+    return _ServiceResult(AutostartBackend.NONE, None)
 
 
-def _write_systemd_user_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+def _write_systemd_user_service(wrapper_path: Path, preset: WaylandPreset) -> Path:
     user_systemd_dir = Path.home().joinpath(".config/systemd/user")
     user_systemd_dir.mkdir(parents=True, exist_ok=True)
     service_path = user_systemd_dir.joinpath(
@@ -283,13 +367,11 @@ def _write_systemd_user_service(wrapper_path: Path, preset: WaylandPreset) -> No
     ).strip()
 
     service_path.write_text(service_content + "\n", encoding="utf-8")
-    Logger.print_info(
-        "Systemd user service written to ~/.config/systemd/user. Enable it with "
-        f"'systemctl --user enable --now {service_path.name}'."
-    )
+
+    return service_path
 
 
-def _write_openrc_service(wrapper_path: Path, preset: WaylandPreset) -> None:
+def _write_openrc_service(wrapper_path: Path, preset: WaylandPreset) -> Path:
     openrc_dir = Path.home().joinpath(".config/openrc")
     svc_dir = openrc_dir.joinpath("init.d")
     svc_dir.mkdir(parents=True, exist_ok=True)
@@ -305,14 +387,169 @@ def _write_openrc_service(wrapper_path: Path, preset: WaylandPreset) -> None:
         command_background="yes"
         pidfile="/run/$RC_SVCNAME.pid"
         name="klipperscreen-{preset.name.lower().replace(' ', '-')}"
+
+        depend() {{
+            need net
+        }}
+
+        _kiauh_wait_for_moonraker() {{
+            local url="${{MOONRAKER_URL:-http://127.0.0.1:7125/server/info}}"
+            local tries=60
+            local have_client=""
+            if command -v wget >/dev/null 2>&1; then
+                have_client="wget"
+            elif command -v curl >/dev/null 2>&1; then
+                have_client="curl"
+            fi
+
+            if [ -z "$have_client" ]; then
+                ewarn "No curl/wget available to probe Moonraker; starting immediately."
+                return 0
+            fi
+
+            while [ $tries -gt 0 ]; do
+                if [ "$have_client" = "wget" ]; then
+                    wget -qO- "$url" >/dev/null 2>&1 && return 0
+                else
+                    curl -fsS "$url" >/dev/null 2>&1 && return 0
+                fi
+                sleep 2
+                tries=$((tries - 1))
+            done
+            ewarn "Moonraker did not become ready in time; continuing regardless."
+            return 0
+        }}
+
+        start_pre() {{
+            _kiauh_wait_for_moonraker
+        }}
         """
     ).strip()
 
     service_path.write_text(content + "\n", encoding="utf-8")
     os.chmod(service_path, 0o755)
-    Logger.print_info(
-        "OpenRC user service stub created under ~/.config/openrc/init.d (requires manual rc-update setup)."
+    
+    return service_path
+
+
+def _write_autostart_entry(wrapper_path: Path, preset: WaylandPreset, shell: str) -> Path:
+    autostart_dir = Path.home().joinpath(".config/autostart")
+    autostart_dir.mkdir(parents=True, exist_ok=True)
+    autostart_path = autostart_dir.joinpath(
+        f"klipperscreen-{preset.name.lower().replace(' ', '-')}-autostart.desktop"
     )
+
+    only_show_in = ""
+    shell_lower = shell.lower()
+    if shell_lower == "phosh":
+        only_show_in = "OnlyShowIn=GNOME;Phosh;"
+    elif shell_lower == "plasma":
+        only_show_in = "OnlyShowIn=KDE;Plasma;"
+
+    content = dedent(
+        f"""
+        [Desktop Entry]
+        Type=Application
+        Name=KlipperScreen ({preset.name})
+        Comment=Autostart KlipperScreen in the {preset.desktop} session
+        Exec={wrapper_path.as_posix()}
+        X-GNOME-Autostart-enabled=true
+        {only_show_in}
+        """
+    ).strip()
+
+    autostart_path.write_text(content + "\n", encoding="utf-8")
+    return autostart_path
+
+
+def _write_login_shell_snippet(wrapper_path: Path, preset: WaylandPreset) -> tuple[Path, Path]:
+    profile_dir = Path.home().joinpath(".config/profile.d")
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    snippet_path = profile_dir.joinpath("klipperscreen-autostart.sh")
+
+    snippet_content = dedent(
+        f"""
+        # Auto-generated by KIAUH: start KlipperScreen once Moonraker is reachable.
+        # shellcheck disable=SC1090
+        if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_CLIENT" ]; then
+            return 0
+        fi
+        if command -v pgrep >/dev/null 2>&1 && \
+            pgrep -f "KlipperScreen-start.sh" >/dev/null 2>&1; then
+            return 0
+        fi
+        moonraker_url="${{MOONRAKER_URL:-http://127.0.0.1:7125/server/info}}"
+        tries=60
+        while [ $tries -gt 0 ]; do
+            if command -v wget >/dev/null 2>&1; then
+                wget -qO- "$moonraker_url" >/dev/null 2>&1 && break
+            elif command -v curl >/dev/null 2>&1; then
+                curl -fsS "$moonraker_url" >/dev/null 2>&1 && break
+            else
+                echo "Neither wget nor curl available to probe Moonraker; skipping check." >&2
+                break
+            fi
+            sleep 2
+            tries=$((tries - 1))
+        done
+        if [ $tries -eq 0 ]; then
+            echo "Moonraker not reachable; KlipperScreen autostart skipped." >&2
+            return 0
+        fi
+        nohup {wrapper_path.as_posix()} >/dev/null 2>&1 &
+        return 0
+        """
+    ).strip()
+
+    snippet_path.write_text(snippet_content + "\n", encoding="utf-8")
+
+    profile_path = Path.home().joinpath(".profile")
+    inclusion_block = dedent(
+        """
+        # >>> KIAUH profile.d hook >>>
+        for profile_snippet in "$HOME"/.config/profile.d/*.sh; do
+            [ -r "$profile_snippet" ] && . "$profile_snippet"
+        done
+        # <<< KIAUH profile.d hook <<<
+        """
+    ).strip()
+
+    if profile_path.exists():
+        profile_contents = profile_path.read_text(encoding="utf-8")
+        if inclusion_block not in profile_contents:
+            if not profile_contents.endswith("\n"):
+                profile_contents += "\n"
+            profile_contents += inclusion_block + "\n"
+            profile_path.write_text(profile_contents, encoding="utf-8")
+    else:
+        profile_contents = "#!/bin/sh\n" + inclusion_block + "\n"
+        profile_path.write_text(profile_contents, encoding="utf-8")
+
+    return snippet_path, profile_path
+
+
+def _detect_mobile_shell() -> Optional[str]:
+    candidates = [
+        os.environ.get("XDG_CURRENT_DESKTOP", ""),
+        os.environ.get("DESKTOP_SESSION", ""),
+        os.environ.get("XDG_SESSION_DESKTOP", ""),
+    ]
+    combined = ":".join(filter(None, candidates)).lower()
+    if "phosh" in combined:
+        return "phosh"
+    if "plasma" in combined or "plasma-mobile" in combined:
+        return "plasma"
+    return None
+
+
+def _shell_matches_preset(shell: str, preset: WaylandPreset) -> bool:
+    shell_lower = shell.lower()
+    name_lower = preset.name.lower()
+    if shell_lower == "phosh":
+        return "phosh" in name_lower
+    if shell_lower == "plasma":
+        return "plasma" in name_lower
+    return False
 
 
 def detect_internal_display() -> Optional[DisplayInfo]:
@@ -495,16 +732,29 @@ def install_klipperscreen() -> None:
 
     try:
         run(KLIPPERSCREEN_INSTALL_SCRIPT.as_posix(), shell=True, check=True)
+
+        autostart_result: Optional[AutostartResult] = None
+        if selected_preset is not None:
+            try:
+                autostart_result = configure_wayland_launchers(selected_preset)
+            except Exception:  # pragma: no cover - already logged inside helper
+                autostart_result = None
+
+        manage_systemd_service = True
+        if autostart_result is not None and autostart_result.uses_user_autostart:
+            manage_systemd_service = False
+
         if mr_instances:
-            patch_klipperscreen_update_manager(mr_instances)
+            patch_klipperscreen_update_manager(
+                mr_instances,
+                manage_systemd_service=manage_systemd_service,
+            )
             InstanceManager.restart_all(mr_instances)
         else:
             Logger.print_info(
                 "Moonraker is not installed! Cannot add "
                 "KlipperScreen to update manager!"
             )
-        if selected_preset is not None:
-            configure_wayland_launchers(selected_preset)
         display_info = detect_internal_display()
         if display_info is not None:
             preseed_klipperscreen_config(display_info)
@@ -514,20 +764,27 @@ def install_klipperscreen() -> None:
         return
 
 
-def patch_klipperscreen_update_manager(instances: List[Moonraker]) -> None:
+def patch_klipperscreen_update_manager(
+    instances: List[Moonraker],
+    *,
+    manage_systemd_service: bool = True,
+) -> None:
     BackupService().backup_moonraker_conf()
+    options = [
+        ("type", "git_repo"),
+        ("path", KLIPPERSCREEN_DIR.as_posix()),
+        ("origin", KLIPPERSCREEN_REPO),
+        ("env", f"{KLIPPERSCREEN_ENV_DIR}/bin/python"),
+        ("requirements", KLIPPERSCREEN_REQ_FILE.as_posix()),
+        ("install_script", KLIPPERSCREEN_INSTALL_SCRIPT.as_posix()),
+    ]
+    if manage_systemd_service:
+        options.insert(3, ("managed_services", "KlipperScreen"))
+
     add_config_section(
         section=KLIPPERSCREEN_UPDATER_SECTION_NAME,
         instances=instances,
-        options=[
-            ("type", "git_repo"),
-            ("path", KLIPPERSCREEN_DIR.as_posix()),
-            ("origin", KLIPPERSCREEN_REPO),
-            ("managed_services", "KlipperScreen"),
-            ("env", f"{KLIPPERSCREEN_ENV_DIR}/bin/python"),
-            ("requirements", KLIPPERSCREEN_REQ_FILE.as_posix()),
-            ("install_script", KLIPPERSCREEN_INSTALL_SCRIPT.as_posix()),
-        ],
+        options=options,
     )
 
 
