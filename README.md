@@ -408,6 +408,7 @@ changes!**
     - Reported to work on Armbian as well but not tested in detail
 - Automatic package manager detection now supports both `apt` and `apk`
     - This allows running KIAUH on Alpine Linux derivatives such as postmarketOS
+    - The helper now inspects `/etc/os-release` so Alpine/postmarketOS hosts always prefer `apk`, even when compatibility wrappers expose `apt-get`
 - During the use of this script you will be asked for your sudo password. There
   are several functions involved which need sudo privileges.
 
