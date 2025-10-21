@@ -16,6 +16,7 @@
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.
 - ✅ Detect the active NGINX include directory (conf.d vs http.d) so Fluidd installs succeed on Alpine/postmarketOS hosts without manual intervention.
+- ✅ Fix web UI detection when generating example `printer.cfg` files so Mainsail/Fluidd include stanzas are added automatically after installation.
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
 - ✅ Offer guided nftables allow-rule prompts for Moonraker and web UIs with selectable network scopes on nftables-enabled hosts.
