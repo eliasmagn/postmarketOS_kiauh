@@ -135,6 +135,11 @@ cd ~ && git clone https://github.com/postmarketOS-community/postmarketos-kiauh.g
   number into the "Perform action"
   prompt and confirm by hitting ENTER.
 
+> ✅ **Case-insensitive prompts** – Every yes/no dialog now accepts upper- or
+> lower-case responses alongside numeric toggles like `1`/`0` and `on`/`off`, so
+> you can answer from touch keyboards and remote shells without triggering the
+> invalid choice handler.
+
 ### 🔄 Update menu UX
 
 - Loading spinners now pause automatically whenever `sudo` needs your password or the package manager prints interactive output, so update checks no longer obscure the prompt behind the animation.

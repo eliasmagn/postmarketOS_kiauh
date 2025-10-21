@@ -28,6 +28,8 @@
 - ✅ Offer optional WireGuard provisioning so remote access can ride an encrypted tunnel alongside the nftables automation.
 - ✅ Pause spinner-driven loading messages whenever sudo interactions are required so update prompts stay visible to the user.
 - ✅ Point the self-update routine at the postmarketOS community fork by default while keeping an escape hatch for personal forks via `KIAUH_REPO_URL`.
+- ✅ Normalize yes/no prompts so they accept mixed-case answers as well as numeric toggles like `1`/`0`, preventing accidental
+     validation errors on touch keyboards and remote sessions.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 

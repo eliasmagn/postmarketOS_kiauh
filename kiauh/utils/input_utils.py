@@ -24,30 +24,28 @@ def get_confirm(question: str, default_choice=True, allow_go_back=False) -> bool
     :param allow_go_back: Navigate back to a previous dialog
     :return: Either True or False, or None on go_back
     """
-    options_confirm = ["y", "yes"]
-    options_decline = ["n", "no"]
-    options_go_back = ["b", "B"]
+    options_confirm = {"y", "yes", "true", "t", "1", "on"}
+    options_decline = {"n", "no", "false", "f", "0", "off"}
+    options_go_back = {"b"}
 
-    if default_choice:
-        def_choice = "(Y/n)"
-        options_confirm.append("")
-    else:
-        def_choice = "(y/N)"
-        options_decline.append("")
+    def_choice = "(Y/n)" if default_choice else "(y/N)"
 
     while True:
-        choice = (
-            input(format_question(question + f" {def_choice}", None)).strip().lower()
-        )
+        raw_choice = input(format_question(question + f" {def_choice}", None)).strip()
+
+        if raw_choice == "":
+            return True if default_choice else False
+
+        choice = raw_choice.casefold()
 
         if choice in options_confirm:
             return True
-        elif choice in options_decline:
+        if choice in options_decline:
             return False
-        elif allow_go_back and choice in options_go_back:
+        if allow_go_back and choice in options_go_back:
             return None
-        else:
-            Logger.print_error(INVALID_CHOICE)
+
+        Logger.print_error(INVALID_CHOICE)
 
 
 def get_number_input(

@@ -30,6 +30,8 @@
 - [x] Ship an apk/OpenRC-aware crowsnest installer so Fluidd and Mainsail webcam panels work without manual service tweaks.
 - [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.
 - [x] Pause menu spinners around privileged commands so sudo password prompts stay visible during update checks.
+- [x] Accept case-insensitive yes/no responses (including `1`/`0` and `on`/`off`) so prompt validation works regardless of the
+      input casing users prefer.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.
