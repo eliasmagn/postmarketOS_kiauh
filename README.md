@@ -278,6 +278,8 @@ that you can plan any manual workarounds.
 | curl                  | curl                     |
 | build-essential       | build-base               |
 
+> ℹ️ **Debian fallback on apk systems** – Moonraker's dependency manifest currently ships a single Debian block. When KIAUH detects an Alpine/postmarketOS environment it now reuses that list, feeds the entries through the translation table above, and surfaces warnings for packages without a native apk port (e.g., `packagekit`).
+
 #### Crowsnest core installer (`tools/libs/pkglist-generic.sh`)
 
 | Debian package     | Alpine package(s)           |
