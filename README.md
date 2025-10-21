@@ -141,6 +141,11 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 
 - When NetworkManager is installed during the KlipperScreen flow on systemd, the helper now prints a reboot reminder instead of forcing an immediate restart so unattended runs can finish cleanly before you reboot manually.
 
+### 🌐 NGINX layout detection
+
+- Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
+- The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
+
 ### 📱 Wayland mobile-shell presets
 
 During KlipperScreen installation you can now pick a Wayland launcher preset

@@ -264,7 +264,7 @@ def get_download_url(base_url: str, client: BaseWebClient) -> str:
 
 def copy_upstream_nginx_cfg() -> None:
     """
-    Creates an upstream.conf in /etc/nginx/conf.d
+    Creates an upstream.conf in the detected NGINX configuration directory.
     :return: None
     """
     source = MODULE_PATH.joinpath("assets/upstreams.conf")
@@ -280,7 +280,7 @@ def copy_upstream_nginx_cfg() -> None:
 
 def copy_common_vars_nginx_cfg() -> None:
     """
-    Creates a common_vars.conf in /etc/nginx/conf.d
+    Creates a common_vars.conf in the detected NGINX configuration directory.
     :return: None
     """
     source = MODULE_PATH.joinpath("assets/common_vars.conf")

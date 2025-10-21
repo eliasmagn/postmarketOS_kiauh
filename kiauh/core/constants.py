@@ -25,4 +25,16 @@ SYSTEMD = Path("/etc/systemd/system")
 OPENRC = Path("/etc/init.d")
 NGINX_SITES_AVAILABLE = Path("/etc/nginx/sites-available")
 NGINX_SITES_ENABLED = Path("/etc/nginx/sites-enabled")
-NGINX_CONFD = Path("/etc/nginx/conf.d")
+
+
+def _resolve_nginx_conf_dir() -> Path:
+    """Return the NGINX conf.d directory used on the current system."""
+
+    candidate_dirs = (Path("/etc/nginx/conf.d"), Path("/etc/nginx/http.d"))
+    for candidate in candidate_dirs:
+        if candidate.exists():
+            return candidate
+    return candidate_dirs[0]
+
+
+NGINX_CONFD = _resolve_nginx_conf_dir()
