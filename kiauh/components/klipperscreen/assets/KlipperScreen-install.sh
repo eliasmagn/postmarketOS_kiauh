@@ -267,7 +267,7 @@ install_graphical_backend()
         echo_text "Installing X server session packages"
         if pkg_install_list "$XSERVER"; then
             echo_ok "Installed X"
-            if [ "$PKG_MANAGER" = "apt" ]; then
+            if [ "$PKG_MANAGER" = "apt" ] || [ "$PKG_MANAGER" = "apk" ]; then
                 update_x11
             fi
             BACKEND="X"
@@ -577,6 +577,10 @@ EOF_LEGACY
 
 update_x11()
 {
+    if [ ! -d /etc/X11 ]; then
+        $PRIV_CMD mkdir -p /etc/X11
+    fi
+    echo_text "Configuring Xorg wrapper permissions for console launches"
     $PRIV_CMD tee /etc/X11/Xwrapper.config > /dev/null << EOF_X11
 allowed_users=anybody
 needs_root_rights=yes
