@@ -164,7 +164,7 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 - When an expected site definition is missing entirely, the menu falls back to the saved default port instead of crashing so you can still reinstall or reconfigure the client.
-- Fluidd's NGINX site definition now renders into a secure temporary file before being moved with elevated privileges, preventing `sudo`→`doas` shims from racing the copy step on postmarketOS hosts where `/home` cleanup can remove the file mid-install.
+- Fluidd's NGINX site definition now streams straight into place with `sudo tee`, sidestepping the tmpfile rename that `doas`-backed hosts occasionally lost before it reached `/etc/nginx`.
 
 ### 🧩 Web UI config hand-off
 
