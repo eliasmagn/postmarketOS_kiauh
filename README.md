@@ -89,6 +89,10 @@ sudo apt-get update && sudo apt-get install git -y
 sudo apk update && sudo apk add git
 ```
 
+> ℹ️ **Alpine/postmarketOS cross-toolchains** – KIAUH now resolves the cross-compilation packages by their native `apk` names:
+> `binutils-arm-none-eabi`, `gcc-arm-none-eabi`, `binutils-avr`, and `gcc-avr`. This avoids the "package not found" errors
+> reported during early postmarketOS installs that still referenced the Debian naming scheme.
+
 * **Step 2:** \
   Once git is installed, use the following command to download KIAUH into your
   home-directory:
