@@ -23,6 +23,7 @@
 - [x] Detect NGINX configuration directory variants so web UIs install cleanly on Alpine/postmarketOS hosts.
 - [x] Ensure freshly generated `printer.cfg` examples include the installed Mainsail/Fluidd configs by correctly detecting existing web UI directories.
 - [x] Detect missing `grep -P` support on BusyBox-based systems, install GNU `grep`, and retry the Moonraker policykit helper automatically.
+- [x] Disable Moonraker's PackageKit-based system update provider on apk hosts and skip the policykit helper when PackageKit is unavailable.
 - [x] Detect nftables firewalls and offer guided allow-rule creation for Moonraker and web UI ports with selectable network scopes.
 - [x] Ship an apk/OpenRC-aware crowsnest installer so Fluidd and Mainsail webcam panels work without manual service tweaks.
 - [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.

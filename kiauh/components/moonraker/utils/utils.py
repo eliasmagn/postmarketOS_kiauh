@@ -35,6 +35,7 @@ from utils.sys_utils import (
     PackageManager,
     get_ipv4_addr,
     get_package_manager,
+    has_package_equivalent,
     parse_packages_from_file,
 )
 
@@ -149,6 +150,13 @@ def create_example_moonraker_conf(
     scp.set_option("server", "klippy_uds_address", str(uds))
     scp.set_option("authorization", "trusted_clients", trusted_clients)
 
+    if not has_package_equivalent("packagekit"):
+        Logger.print_info(
+            "PackageKit is unavailable on this platform; Moonraker system updates "
+            "will be disabled in the generated configuration."
+        )
+        scp.set_option("update_manager", "enable_system_updates", "False")
+
     # add existing client and client configs in the update section
     if clients is not None and len(clients) > 0:
         for c in clients:
@@ -181,6 +189,38 @@ def create_example_moonraker_conf(
 
     scp.write_file(target)
     Logger.print_ok(f"Example moonraker.conf created in '{instance.base.cfg_dir}'")
+
+
+def disable_system_updates(instances: Optional[List[Moonraker]] = None) -> None:
+    manager = get_package_manager()
+    if has_package_equivalent("packagekit", manager):
+        return
+
+    if not instances:
+        instances = get_instances(Moonraker)
+
+    if not instances:
+        return
+
+    updated = False
+    for instance in instances:
+        cfg_path = instance.cfg_file
+        if not cfg_path.exists():
+            continue
+
+        scp = SimpleConfigParser()
+        scp.read_file(cfg_path)
+        if scp.getval("update_manager", "enable_system_updates", fallback="True") == "False":
+            continue
+        scp.set_option("update_manager", "enable_system_updates", "False")
+        scp.write_file(cfg_path)
+        updated = True
+
+    if updated:
+        Logger.print_info(
+            "Moonraker system update provider disabled because PackageKit is not available "
+            "on apk-based installations."
+        )
 
 
 def backup_moonraker_dir() -> None:
