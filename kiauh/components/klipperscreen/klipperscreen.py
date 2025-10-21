@@ -154,6 +154,7 @@ WAYLAND_PRESETS: Dict[str, WaylandPreset] = {
 
 WAYLAND_PRESET_SKIP_KEY = "0"
 KLIPPERSCREEN_CONFIG_PATH = Path.home().joinpath("printer_data/config/KlipperScreen.conf")
+BACKEND_TRACK_FILENAME = ".kiauh-backend-choice"
 
 
 def _sync_installer_script_with_asset() -> None:
@@ -724,13 +725,25 @@ def preseed_klipperscreen_config(display: DisplayInfo) -> None:
         Logger.print_ok("Updated KlipperScreen.conf with detected display defaults.")
 
 
+def _read_backend_choice(path: Path) -> Optional[str]:
+    try:
+        raw = path.read_text(encoding="utf-8").strip().upper()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return None
+    if raw in {"X", "W"}:
+        return raw
+    return None
+
+
 def install_klipperscreen() -> None:
     Logger.print_status("Installing KlipperScreen ...")
 
     if not check_python_version(3, 7):
         return
 
-    selected_preset = prompt_wayland_preset()
+    selected_preset: Optional[WaylandPreset] = None
 
     mr_instances = get_instances(Moonraker)
     if not mr_instances:
@@ -756,8 +769,49 @@ def install_klipperscreen() -> None:
     git_clone_wrapper(KLIPPERSCREEN_REPO, KLIPPERSCREEN_DIR)
     _sync_installer_script_with_asset()
 
+    backend_track_path = KLIPPERSCREEN_INSTALL_SCRIPT.parent.joinpath(
+        BACKEND_TRACK_FILENAME
+    )
+    if backend_track_path.exists():
+        try:
+            backend_track_path.unlink()
+        except OSError:
+            pass
+
+    env = os.environ.copy()
+    env["KIAUH_BACKEND_TRACK_FILE"] = backend_track_path.as_posix()
+
+    extras_choice = get_confirm(
+        "Install optional KlipperScreen extras (fonts and media helpers)?",
+        default_choice=False,
+        allow_go_back=True,
+    )
+    if extras_choice is None:
+        return
+    env["KIAUH_KS_INSTALL_EXTRAS"] = "1" if extras_choice else "0"
+
     try:
-        run(KLIPPERSCREEN_INSTALL_SCRIPT.as_posix(), shell=True, check=True)
+        run(
+            KLIPPERSCREEN_INSTALL_SCRIPT.as_posix(),
+            shell=True,
+            check=True,
+            env=env,
+        )
+
+        backend_choice = _read_backend_choice(backend_track_path)
+        if backend_choice == "W":
+            selected_preset = prompt_wayland_preset()
+        elif backend_choice == "X":
+            Logger.print_info(
+                "Skipping Wayland preset generation because the X11 backend was selected."
+            )
+        else:
+            if get_confirm(
+                "Configure a Wayland preset anyway?",
+                default_choice=False,
+                allow_go_back=False,
+            ):
+                selected_preset = prompt_wayland_preset()
 
         autostart_result: Optional[AutostartResult] = None
         if selected_preset is not None:
@@ -788,6 +842,12 @@ def install_klipperscreen() -> None:
     except CalledProcessError as e:
         Logger.print_error(f"Error installing KlipperScreen:\n{e}")
         return
+    finally:
+        if backend_track_path.exists():
+            try:
+                backend_track_path.unlink()
+            except OSError:
+                pass
 
 
 def patch_klipperscreen_update_manager(

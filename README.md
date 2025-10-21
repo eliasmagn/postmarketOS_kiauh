@@ -142,7 +142,10 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 
 During KlipperScreen installation you can now pick a Wayland launcher preset
 that mirrors the upstream Phosh and Plasma Mobile recommendations while also
-surfacing device-aware display defaults gathered from postmarketOS hardware
+deferring the choice until after you explicitly select the Wayland backend in
+the upstream installer. X11-first setups therefore skip the extra question but
+can rerun the preset helper later if they move to Wayland. When Wayland is
+selected, the prompt surfaces device-aware display defaults gathered from postmarketOS hardware
 probing. KIAUH writes the following artefacts after cloning the KlipperScreen
 repository:
 
@@ -172,6 +175,19 @@ runlevel (for example `~/.config/openrc/runlevels/default/`).
 The launcher presets are additive—the existing system instance managed by KIAUH
 remains untouched—so you can try the Wayland session without disrupting the
 original install.
+
+### 🧹 Minimal KlipperScreen footprint
+
+- The KlipperScreen installer now defaults to the packages strictly required to
+  run the UI with touch input. Optional fonts and media backends are skipped
+  unless you explicitly opt in when KIAUH asks before launching the upstream
+  installer.
+- Headless or scripted runs can preseed the decision by exporting
+  `KIAUH_KS_INSTALL_EXTRAS=1` (install extras) or `KIAUH_KS_INSTALL_EXTRAS=0`
+  (keep the minimal set) before invoking `KlipperScreen-install.sh`.
+- When the extras are skipped, the downstream log highlights that the install
+  kept the dependency footprint minimal, so you can verify that the additional
+  packages were not pulled in.
 
 ### 🪟 X11 remains a first-class option on postmarketOS
 
