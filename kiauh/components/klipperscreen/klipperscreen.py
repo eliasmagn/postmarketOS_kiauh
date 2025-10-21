@@ -150,6 +150,37 @@ WAYLAND_PRESETS: Dict[str, WaylandPreset] = {
             "Keeps cursor size predictable when Plasma's scaling kicks in.",
         ],
     ),
+    "3": WaylandPreset(
+        key="3",
+        name="Sxmo",
+        desktop="Sxmo",
+        description=(
+            "Targets Sxmo's wlroots session defaults so KlipperScreen launches under its "
+            "dwl/sway based environments on Qualcomm handsets. Applies the wlroots "
+            "compatibility flags typically exported by sxmo-utils."
+        ),
+        env={
+            "XDG_SESSION_TYPE": "wayland",
+            "XDG_CURRENT_DESKTOP": "sxmo",
+            "XDG_SESSION_DESKTOP": "sxmo",
+            "WAYLAND_DISPLAY": "wayland-0",
+            "QT_QPA_PLATFORM": "wayland-egl",
+            "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
+            "GDK_BACKEND": "wayland,x11",
+            "SDL_VIDEODRIVER": "wayland",
+            "MOZ_ENABLE_WAYLAND": "1",
+            "CLUTTER_BACKEND": "wayland",
+            "WLR_RENDERER_ALLOW_SOFTWARE": "1",
+            "WLR_NO_HARDWARE_CURSORS": "1",
+            "XCURSOR_SIZE": "32",
+        },
+        notes=[
+            "Mirrors the environment exported by sxmo-utils so wlroots-based shells on "
+            "qcom-msm8953 devices can spawn KlipperScreen without extra wrappers.",
+            "For systems with working GPU drivers you can drop WLR_RENDERER_ALLOW_SOFTWARE "
+            "after verifying hardware acceleration.",
+        ],
+    ),
 }
 
 WAYLAND_PRESET_SKIP_KEY = "0"
@@ -565,6 +596,8 @@ def _detect_mobile_shell() -> Optional[str]:
         return "phosh"
     if "plasma" in combined or "plasma-mobile" in combined:
         return "plasma"
+    if "sxmo" in combined:
+        return "sxmo"
     return None
 
 
@@ -575,6 +608,8 @@ def _shell_matches_preset(shell: str, preset: WaylandPreset) -> bool:
         return "phosh" in name_lower
     if shell_lower == "plasma":
         return "plasma" in name_lower
+    if shell_lower == "sxmo":
+        return "sxmo" in name_lower
     return False
 
 

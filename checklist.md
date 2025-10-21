@@ -8,6 +8,7 @@
 - [x] Inventory component installer dependencies and document the Debian ➜ Alpine package mapping, including missing ports.
 - [x] Introduce init-system detection and mirror service management for systemd and OpenRC, updating every component to use the shared abstraction.
 - [x] Add Phosh/Plasma Wayland presets to the KlipperScreen installer and generate launchers during installation.
+- [x] Extend the Wayland preset helper with an Sxmo wlroots profile so msm8953 reference images launch KlipperScreen reliably.
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
 - [x] Gate Moonraker update-manager's `managed_services` stanza behind the selected KlipperScreen autostart backend.
