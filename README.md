@@ -8,14 +8,14 @@
 </p>
 
 <p align="center">
-  <a><img src="https://img.shields.io/github/license/dw-0/kiauh"></a>
-  <a><img src="https://img.shields.io/github/stars/dw-0/kiauh"></a>
-  <a><img src="https://img.shields.io/github/forks/dw-0/kiauh"></a>
-  <a><img src="https://img.shields.io/github/languages/top/dw-0/kiauh?logo=gnubash&logoColor=white"></a>
-  <a><img src="https://img.shields.io/github/v/tag/dw-0/kiauh"></a>
+  <a><img src="https://img.shields.io/github/license/postmarketOS-community/postmarketos-kiauh"></a>
+  <a><img src="https://img.shields.io/github/stars/postmarketOS-community/postmarketos-kiauh"></a>
+  <a><img src="https://img.shields.io/github/forks/postmarketOS-community/postmarketos-kiauh"></a>
+  <a><img src="https://img.shields.io/github/languages/top/postmarketOS-community/postmarketos-kiauh?logo=gnubash&logoColor=white"></a>
+  <a><img src="https://img.shields.io/github/v/tag/postmarketOS-community/postmarketos-kiauh"></a>
   <br />
-  <a><img src="https://img.shields.io/github/last-commit/dw-0/kiauh"></a>
-  <a><img src="https://img.shields.io/github/contributors/dw-0/kiauh"></a>
+  <a><img src="https://img.shields.io/github/last-commit/postmarketOS-community/postmarketos-kiauh"></a>
+  <a><img src="https://img.shields.io/github/contributors/postmarketOS-community/postmarketos-kiauh"></a>
 </p>
 
 <hr>
@@ -112,8 +112,14 @@ sudo apk update && sudo apk add git
   home-directory:
 
 ```shell
-cd ~ && git clone https://github.com/dw-0/kiauh.git
+cd ~ && git clone https://github.com/postmarketOS-community/postmarketos-kiauh.git
 ```
+
+> ℹ️ **Self-update origin rewriting** – `kiauh.sh` now ensures that the script's
+> `origin` remote points to the postmarketOS community fork before running a
+> self-update. If you maintain a personal fork, set
+> `KIAUH_REPO_URL=<your-remote-url>` in the environment before launching KIAUH
+> so the helper keeps your remote intact.
 
 * **Step 3:** \
   Finally, start KIAUH by running the next command:
@@ -477,8 +483,8 @@ changes!**
 <h2 align="center">🎖️ Contributors 🎖️</h2>
 
 <div align="center">
-  <a href="https://github.com/dw-0/kiauh/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=dw-0/kiauh" alt=""/>
+  <a href="https://github.com/postmarketOS-community/postmarketos-kiauh/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=postmarketOS-community/postmarketos-kiauh" alt=""/>
   </a>
 </div>
 

@@ -16,6 +16,71 @@ clear -x
 umask 022
 
 #===================================================#
+#=================== GLOBAL VARS ===================#
+#===================================================#
+
+readonly KIAUH_SRCDIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+readonly DEFAULT_KIAUH_REPO="https://github.com/postmarketOS-community/postmarketos-kiauh.git"
+declare -ar LEGACY_KIAUH_REPOS=(
+  "https://github.com/dw-0/kiauh.git"
+  "git@github.com:dw-0/kiauh.git"
+  "https://github.com/dw-0/kiauh"
+  "git@github.com:dw-0/kiauh"
+)
+
+: "${KIAUH_REPO_URL:=${DEFAULT_KIAUH_REPO}}"
+
+#===================================================#
+#==================== UTILITIES ====================#
+#===================================================#
+
+function _kiauh_get_current_branch() {
+  local current_branch
+
+  current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+  if [[ -z "${current_branch}" || "${current_branch}" == "HEAD" ]]; then
+    current_branch=$(git remote show origin 2>/dev/null | sed -n '/HEAD branch/s/.*: //p')
+  fi
+
+  echo "${current_branch}"
+}
+
+function _kiauh_should_update_remote() {
+  local current_url legacy
+
+  current_url=$(git config --get remote.origin.url 2>/dev/null)
+
+  if [[ -z "${current_url}" ]]; then
+    return 0
+  fi
+
+  for legacy in "${LEGACY_KIAUH_REPOS[@]}"; do
+    if [[ "${current_url}" == "${legacy}" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+function _kiauh_ensure_origin_remote() {
+  local current_url
+
+  current_url=$(git config --get remote.origin.url 2>/dev/null)
+
+  if _kiauh_should_update_remote; then
+    if [[ -z "${current_url}" ]]; then
+      status_msg "Setting KIAUH origin remote to ${KIAUH_REPO_URL}"
+      git remote add origin "${KIAUH_REPO_URL}"
+    else
+      status_msg "Switching KIAUH origin remote to ${KIAUH_REPO_URL}"
+      git remote set-url origin "${KIAUH_REPO_URL}"
+    fi
+  fi
+}
+
+#===================================================#
 #=================== UPDATE KIAUH ==================#
 #===================================================#
 
@@ -23,7 +88,23 @@ function update_kiauh() {
   status_msg "Updating KIAUH ..."
 
   cd "${KIAUH_SRCDIR}"
-  git reset --hard && git pull
+
+  _kiauh_ensure_origin_remote
+
+  local branch
+  branch=$(_kiauh_get_current_branch)
+
+  if [[ -z "${branch}" ]]; then
+    echo "Unable to determine the active branch for KIAUH updates."
+    exit 1
+  fi
+
+  if ! git fetch origin "${branch}"; then
+    echo "Fetching updates for branch '${branch}' failed."
+    exit 1
+  fi
+
+  git reset --hard "origin/${branch}"
 
   ok_msg "Update complete! Please restart KIAUH."
   exit 0
@@ -35,16 +116,23 @@ function update_kiauh() {
 
 function kiauh_update_avail() {
   [[ ! -d "${KIAUH_SRCDIR}/.git" ]] && return
-  local origin head
+  local origin head branch
 
   cd "${KIAUH_SRCDIR}"
 
-  ### abort if not on master branch
-  ! git branch -a | grep -q "\* master" && return
+  _kiauh_ensure_origin_remote
+
+  branch=$(_kiauh_get_current_branch)
+
+  [[ -z "${branch}" ]] && return
+
+  if ! git ls-remote --exit-code --heads origin "${branch}" &>/dev/null; then
+    return
+  fi
 
   ### compare commit hash
-  git fetch -q
-  origin=$(git rev-parse --short=8 origin/master)
+  git fetch -q origin "${branch}"
+  origin=$(git rev-parse --short=8 "origin/${branch}")
   head=$(git rev-parse --short=8 HEAD)
 
   if [[ ${origin} != "${head}" ]]; then
@@ -116,7 +204,7 @@ function main() {
      exit 1
    fi
 
-   entrypoint=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+   entrypoint="${KIAUH_SRCDIR}"
 
    export PYTHONPATH="${entrypoint}"
 

@@ -10,6 +10,7 @@ The project focuses on:
 - Replacing disruptive post-install reboots with clear guidance so scripted deployments can finish gracefully.
 - Maintaining documentation that highlights platform-specific nuances for end users.
 - Tracking Debian package requirements in each installer and pairing them with Alpine `apk` equivalents—cross-compilation toolchains included—so postmarketOS users can reproduce the same setup flow without manual package hunting.
+- Steering the self-update routine toward the postmarketOS community fork by default while still allowing personal forks to override the `origin` remote through `KIAUH_REPO_URL`.
 - Normalizing Moonraker's Debian-centric dependency manifests so apk-based systems transparently reuse and translate the same requirements without aborting the install flow.
 - Detecting BusyBox-specific tool limitations (for example, the absence of `grep -P`) and automatically installing the missing GNU utilities so Moonraker's policykit configuration succeeds on postmarketOS.
 - Replacing upstream-only installers with apk-aware shims when necessary so features like KlipperScreen's X11 session remain first-class citizens alongside the newer Wayland presets.

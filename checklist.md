@@ -13,6 +13,7 @@
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
 - [x] Install and register a native OpenRC KlipperScreen service so standalone console installs boot directly into the UI.
 - [x] Ensure apk-based KlipperScreen X11 installs write Xwrapper permissions so OpenRC services can spawn Xorg without logind.
+- [x] Ensure the self-update routine repoints the KIAUH `origin` remote to the postmarketOS community fork by default while allowing `KIAUH_REPO_URL` overrides for personal forks.
 - [x] Patch `KlipperScreen-start.sh` with a default `KS_XCLIENT` fallback so manual launches still reach the UI when services omit the variable.
 - [x] Gate Moonraker update-manager's `managed_services` stanza behind the selected KlipperScreen autostart backend.
 - [x] Teach the Moonraker dependency parser to reuse the Debian list when apk-based systems lack a dedicated entry and translate it on the fly.
