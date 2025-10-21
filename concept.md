@@ -17,6 +17,7 @@ The project focuses on:
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, Sxmo, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—so web interfaces install without manual path fixes.
 - Detecting nftables-based firewalls and layering guided prompts that open Moonraker and Fluidd ports only for the networks you approve, keeping phones and tablets reachable without exposing them broadly by default.
+- Replacing crowsnest's Debian-centric installer with an apk-aware deployment path that renders the upstream configuration and provisions an OpenRC service so Fluidd and Mainsail webcam panels stay functional on postmarketOS.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Sequencing installer prompts so Wayland-specific choices only surface after the user opts into the Wayland backend, keeping the X11-first flow streamlined while preserving the option to revisit presets later.
 - Adapting KlipperScreen autostart to the surrounding shell—desktop environments receive `.desktop` launchers while console-only OpenRC systems get login hooks that wait for Moonraker before spawning the UI.

@@ -148,6 +148,12 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 
+### 📹 Crowsnest webcam integration
+
+- The crowsnest installer now falls back to an apk-aware workflow when `apt` is unavailable, translating the upstream dependency list through KIAUH's package mapper so ustreamer builds cleanly on postmarketOS and other Alpine derivatives.
+- During the apk install path the helper renders the upstream `crowsnest.conf`, environment file, and logrotate rule directly from the cloned repository, then provisions a native OpenRC service that mirrors the original systemd unit so `/webcam`, `/webcam2`, etc. work immediately inside Fluidd and Mainsail.
+- Installations on OpenRC hosts add the invoking user to the `video` group automatically and restart the new service, which keeps the camera stream reachable through the existing NGINX reverse proxy without manual tweaks.
+
 ### 🔒 nftables firewall integration
 
 - When the helper detects the `nft` binary it now inspects the default `inet filter input` chain and offers to add allow rules for Moonraker and NGINX-hosted web UIs (Fluidd, Mainsail, etc.). Fresh installs only prompt when the target port is missing so existing firewall policies remain untouched.
