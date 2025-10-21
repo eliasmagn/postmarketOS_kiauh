@@ -17,9 +17,11 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, CalledProcessError, Popen, check_output, run
-from typing import List, Literal, Set, Tuple
+from typing import Iterable, List, Literal, Set, Tuple
 
 from core.constants import SYSTEMD
 from core.logger import Logger
@@ -41,6 +43,53 @@ SysCtlManageAction = Literal["daemon-reload", "reset-failed"]
 
 class VenvCreationFailedException(Exception):
     pass
+
+
+class PackageManager(Enum):
+    APT = "apt"
+    APK = "apk"
+    UNKNOWN = "unknown"
+
+
+@lru_cache(maxsize=1)
+def get_package_manager() -> PackageManager:
+    if shutil.which("apt-get") and shutil.which("dpkg-query"):
+        return PackageManager.APT
+    if shutil.which("apk"):
+        return PackageManager.APK
+    return PackageManager.UNKNOWN
+
+
+PACKAGE_TRANSLATIONS = {
+    PackageManager.APK: {
+        "python3-virtualenv": "py3-virtualenv",
+        "python3-pip": "py3-pip",
+        "python3-dev": "python3-dev",
+        "python3-setuptools": "py3-setuptools",
+        "python3-numpy": "py3-numpy",
+        "python3-matplotlib": "py3-matplotlib",
+        "libatlas-base-dev": "atlas-dev",
+        "libopenblas-dev": "openblas-dev",
+        "libyaml-dev": "yaml-dev",
+        "build-essential": "build-base",
+        "dpkg-dev": "dpkg",
+    }
+}
+
+
+def resolve_package_names(packages: Iterable[str], manager: PackageManager) -> List[str]:
+    translations = PACKAGE_TRANSLATIONS.get(manager, {})
+    resolved: List[str] = []
+    for package in packages:
+        mapped = translations.get(package, package)
+        if isinstance(mapped, (list, tuple, set)):
+            for item in mapped:
+                if item not in resolved:
+                    resolved.append(item)
+        else:
+            if mapped not in resolved:
+                resolved.append(mapped)
+    return resolved
 
 
 def kill(opt_err_msg: str = "") -> None:
@@ -241,39 +290,64 @@ def update_system_package_lists(silent: bool, rls_info_change=False) -> None:
     :param rls_info_change: Flag for "--allow-releaseinfo-change"
     :return: None
     """
-    cache_mtime: float = 0
-    cache_files: List[Path] = [
-        Path("/var/lib/apt/periodic/update-success-stamp"),
-        Path("/var/lib/apt/lists"),
-    ]
-    for cache_file in cache_files:
-        if cache_file.exists():
-            cache_mtime = max(cache_mtime, os.path.getmtime(cache_file))
+    manager = get_package_manager()
 
-    update_age = int(time.time() - cache_mtime)
-    update_interval = 6 * 3600  # 48hrs
+    if manager == PackageManager.APT:
+        cache_mtime: float = 0
+        cache_files: List[Path] = [
+            Path("/var/lib/apt/periodic/update-success-stamp"),
+            Path("/var/lib/apt/lists"),
+        ]
+        for cache_file in cache_files:
+            if cache_file.exists():
+                cache_mtime = max(cache_mtime, os.path.getmtime(cache_file))
 
-    if update_age <= update_interval:
-        return
+        update_age = int(time.time() - cache_mtime)
+        update_interval = 6 * 3600  # 48hrs
 
-    if not silent:
-        Logger.print_status("Updating package list...")
-
-    try:
-        command = ["sudo", "apt-get", "update"]
-        if rls_info_change:
-            command.append("--allow-releaseinfo-change")
-
-        result = run(command, stderr=PIPE, text=True)
-        if result.returncode != 0 or result.stderr:
-            Logger.print_error(f"{result.stderr}", False)
-            Logger.print_error("Updating system package list failed!")
+        if update_age <= update_interval:
             return
 
-        Logger.print_ok("System package list update successful!")
-    except CalledProcessError as e:
-        Logger.print_error(f"Error updating system package list:\n{e.stderr.decode()}")
-        raise
+        if not silent:
+            Logger.print_status("Updating package list...")
+
+        try:
+            command = ["sudo", "apt-get", "update"]
+            if rls_info_change:
+                command.append("--allow-releaseinfo-change")
+
+            result = run(command, stderr=PIPE, text=True)
+            if result.returncode != 0 or result.stderr:
+                Logger.print_error(f"{result.stderr}", False)
+                Logger.print_error("Updating system package list failed!")
+                return
+
+            Logger.print_ok("System package list update successful!")
+        except CalledProcessError as e:
+            stderr = e.stderr.decode() if isinstance(e.stderr, (bytes, bytearray)) else e.stderr
+            Logger.print_error(f"Error updating system package list:\n{stderr}")
+            raise
+
+    elif manager == PackageManager.APK:
+        if not silent:
+            Logger.print_status("Updating package list...")
+
+        try:
+            command = ["sudo", "apk", "update"]
+            result = run(command, stderr=PIPE, text=True)
+            if result.returncode != 0:
+                Logger.print_error(f"{result.stderr}", False)
+                Logger.print_error("Updating system package list failed!")
+                return
+
+            Logger.print_ok("System package list update successful!")
+        except CalledProcessError as e:
+            stderr = e.stderr.decode() if isinstance(e.stderr, (bytes, bytearray)) else e.stderr
+            Logger.print_error(f"Error updating system package list:\n{stderr}")
+            raise
+
+    else:
+        Logger.print_warn("Unsupported package manager. Skipping package list update.")
 
 
 def get_upgradable_packages() -> List[str]:
@@ -281,16 +355,34 @@ def get_upgradable_packages() -> List[str]:
     Reads all system packages that can be upgraded.
     :return: A list of package names available for upgrade
     """
+    manager = get_package_manager()
+
     try:
-        command = ["apt", "list", "--upgradable"]
-        output: str = check_output(command, stderr=DEVNULL, text=True, encoding="utf-8")
-        pkglist = []
-        for line in output.split("\n"):
-            if "/" not in line:
-                continue
-            pkg = line.split("/")[0]
-            pkglist.append(pkg)
-        return pkglist
+        if manager == PackageManager.APT:
+            command = ["apt", "list", "--upgradable"]
+            output: str = check_output(command, stderr=DEVNULL, text=True, encoding="utf-8")
+            pkglist = []
+            for line in output.split("\n"):
+                if "/" not in line:
+                    continue
+                pkg = line.split("/")[0]
+                pkglist.append(pkg)
+            return pkglist
+
+        if manager == PackageManager.APK:
+            command = ["apk", "version", "-l", "<"]
+            output = check_output(command, stderr=DEVNULL, text=True, encoding="utf-8")
+            pkglist = []
+            for line in output.splitlines():
+                if not line.strip():
+                    continue
+                pkg = line.split()[0]
+                if pkg and pkg not in pkglist:
+                    pkglist.append(pkg)
+            return pkglist
+
+        Logger.print_warn("Unsupported package manager. Cannot determine upgradable packages.")
+        return []
     except CalledProcessError as e:
         raise Exception(f"Error reading upgradable packages: {e}")
 
@@ -301,17 +393,38 @@ def check_package_install(packages: Set[str]) -> List[str]:
     :param packages: List of strings of package names
     :return: A list containing the names of packages that are not installed
     """
-    not_installed = []
-    for package in packages:
-        command = ["dpkg-query", "-f'${Status}'", "--show", package]
-        result = run(
-            command,
-            stdout=PIPE,
-            stderr=DEVNULL,
-            text=True,
-        )
-        if "installed" not in result.stdout.strip("'").split():
-            not_installed.append(package)
+    manager = get_package_manager()
+    packages_to_check = resolve_package_names(packages, manager)
+
+    not_installed: List[str] = []
+
+    if manager == PackageManager.APT:
+        for package in packages_to_check:
+            command = ["dpkg-query", "-f'${Status}'", "--show", package]
+            result = run(
+                command,
+                stdout=PIPE,
+                stderr=DEVNULL,
+                text=True,
+            )
+            if "installed" not in result.stdout.strip("'").split():
+                not_installed.append(package)
+
+    elif manager == PackageManager.APK:
+        for package in packages_to_check:
+            command = ["apk", "info", "-e", package]
+            result = run(
+                command,
+                stdout=PIPE,
+                stderr=DEVNULL,
+                text=True,
+            )
+            if result.returncode != 0:
+                not_installed.append(package)
+
+    else:
+        Logger.print_warn("Unsupported package manager. Assuming packages are missing.")
+        not_installed.extend(packages_to_check)
 
     return not_installed
 
@@ -322,15 +435,29 @@ def install_system_packages(packages: List[str]) -> None:
     :param packages: List of system package names
     :return: None
     """
+    if not packages:
+        return
+
+    manager = get_package_manager()
+    packages_to_install = resolve_package_names(packages, manager)
+
     try:
-        command = ["sudo", "apt-get", "install", "-y"]
-        for pkg in packages:
-            command.append(pkg)
-        run(command, stderr=PIPE, check=True)
+        if manager == PackageManager.APT:
+            command = ["sudo", "apt-get", "install", "-y"] + packages_to_install
+            run(command, stderr=PIPE, check=True)
+        elif manager == PackageManager.APK:
+            command = ["sudo", "apk", "add", "--no-cache"] + packages_to_install
+            run(command, stderr=PIPE, check=True, text=True)
+        else:
+            raise RuntimeError("Unsupported package manager")
 
         Logger.print_ok("Packages successfully installed.")
     except CalledProcessError as e:
-        Logger.print_error(f"Error installing packages:\n{e.stderr.decode()}")
+        stderr = e.stderr.decode() if isinstance(e.stderr, (bytes, bytearray)) else e.stderr
+        Logger.print_error(f"Error installing packages:\n{stderr}")
+        raise
+    except RuntimeError as e:
+        Logger.print_error(str(e))
         raise
 
 
@@ -340,15 +467,28 @@ def upgrade_system_packages(packages: List[str]) -> None:
     :param packages: List of system package names
     :return: None
     """
+    if not packages:
+        return
+
+    manager = get_package_manager()
+    packages_to_upgrade = resolve_package_names(packages, manager)
+
     try:
-        command = ["sudo", "apt-get", "upgrade", "-y"]
-        for pkg in packages:
-            command.append(pkg)
-        run(command, stderr=PIPE, check=True)
+        if manager == PackageManager.APT:
+            command = ["sudo", "apt-get", "upgrade", "-y"] + packages_to_upgrade
+            run(command, stderr=PIPE, check=True)
+        elif manager == PackageManager.APK:
+            command = ["sudo", "apk", "upgrade"] + packages_to_upgrade
+            run(command, stderr=PIPE, check=True, text=True)
+        else:
+            raise RuntimeError("Unsupported package manager")
 
         Logger.print_ok("Packages successfully upgraded.")
     except CalledProcessError as e:
-        raise Exception(f"Error upgrading packages:\n{e.stderr.decode()}")
+        stderr = e.stderr.decode() if isinstance(e.stderr, (bytes, bytearray)) else e.stderr
+        raise Exception(f"Error upgrading packages:\n{stderr}")
+    except RuntimeError as e:
+        raise Exception(str(e))
 
 
 # this feels hacky and not quite right, but for now it works
