@@ -9,7 +9,7 @@
 - ✅ Ship Wayland launcher presets for Phosh/Plasma along with auto-generated KlipperScreen display defaults so mobile shells behave out of the box.
 - ✅ Mirror Sxmo's wlroots session exports so Qualcomm msm8953 reference images boot KlipperScreen without manual environment tweaks.
 - ✅ Auto-configure KlipperScreen autostart across Phosh/Plasma desktops and OpenRC consoles while keeping Moonraker's update-manager systemd hints optional.
-- ✅ Publish postmarketOS-specific prerequisites covering SSH access, UI packages, and seat management so the new presets work on phones and tablets.
+- ✅ Publish postmarketOS-specific prerequisites covering SSH access, the minimal `none` UI selection, and seat management so the new presets work on phones and tablets.
 - ✅ Replace KlipperScreen's upstream installer with an apk-aware wrapper so X11 and Wayland dependencies resolve correctly on postmarketOS.
 - ✅ Ship a native OpenRC KlipperScreen service so standalone installs boot directly into the UI without systemd dependencies.
 - ✅ Apply Xwrapper console permissions during apk installs so OpenRC-managed KlipperScreen services can start Xorg successfully.
