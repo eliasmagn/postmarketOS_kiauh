@@ -24,6 +24,8 @@ The project focuses on:
 - Offering a panorama-orientation prompt that rewrites KlipperScreen defaults and seeds an X11 helper so wide touch panels report horizontal resolutions without extra manual tweaks.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories or the absence of Debian-style site folders—so web interfaces install without manual path fixes.
 - Pre-provisioning `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` when they are missing and streaming generated site definitions directly into place with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
+- Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—so web interfaces install without manual path fixes.
+- Streaming generated NGINX site definitions directly into privileged paths with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
 - Ensuring generated printer configuration templates automatically link the installed web UIs (Mainsail, Fluidd, etc.) so fresh Klipper instances keep their dashboards reachable without manual edits.
 - Falling back to sane defaults when expected NGINX site stanzas are absent, keeping menu flows responsive instead of crashing on missing configs.
 - Detecting nftables-based firewalls and layering guided prompts that open Moonraker and Fluidd ports only for the networks you approve, keeping phones and tablets reachable without exposing them broadly by default.
