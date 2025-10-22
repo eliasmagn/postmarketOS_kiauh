@@ -7,6 +7,7 @@
 - [x] Refresh documentation to describe the new package manager support.
 - [x] Ship an apk-aware KlipperScreen installer shim so X11 remains installable on postmarketOS alongside the updated Wayland guidance.
 - [x] Inventory component installer dependencies and document the Debian ➜ Alpine package mapping, including missing ports.
+- [x] Capture kernel configuration guidance for Klipper, Moonraker, KlipperScreen, and crowsnest to support custom postmarketOS builds.
 - [x] Introduce init-system detection and mirror service management for systemd and OpenRC, updating every component to use the shared abstraction.
 - [x] Add Phosh/Plasma Wayland presets to the KlipperScreen installer and generate launchers during installation.
 - [x] Extend the Wayland preset helper with an Sxmo wlroots profile so msm8953 reference images launch KlipperScreen reliably.
