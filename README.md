@@ -75,6 +75,8 @@ If you are deploying KIAUH on a phone or tablet that ships with postmarketOS, ma
 
 With these prerequisites met, the init-system helper will link services into OpenRC automatically and the launcher presets can bind to the device's Wayland shell without manual tweaks.
 
+> 🛠️ **Kernel configuration checklist** – When you build or select a custom postmarketOS kernel, make sure the drivers required by Klipper, Moonraker, KlipperScreen, crowsnest, and WireGuard are enabled. See [docs/kernel_requirements.md](docs/kernel_requirements.md) for a per-component breakdown of the key `CONFIG_` options and module names to verify before flashing.
+
 These steps **only** apply if you are actually using a Raspberry Pi. In case you
 want
 to use a different SBC (like an Orange Pi or any other Pi derivates), please

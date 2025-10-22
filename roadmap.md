@@ -35,6 +35,7 @@
 - ✅ Point the self-update routine at the postmarketOS community fork by default while keeping an escape hatch for personal forks via `KIAUH_REPO_URL`.
 - ✅ Normalize yes/no prompts so they accept mixed-case answers as well as numeric toggles like `1`/`0`, preventing accidental
      validation errors on touch keyboards and remote sessions.
+- ✅ Publish a kernel configuration checklist so postmarketOS maintainers can confirm Klipper, Moonraker, KlipperScreen, and crowsnest drivers before flashing custom builds.
 - Automate KlipperScreen smoke tests on representative postmarketOS handsets/tablets to validate display heuristics after each release.
 - Collect tester feedback and grow the public compatibility matrix with device-specific init/display notes.
 
