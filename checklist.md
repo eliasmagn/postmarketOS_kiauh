@@ -32,6 +32,7 @@
 - [x] Ship an apk/OpenRC-aware crowsnest installer so Fluidd and Mainsail webcam panels work without manual service tweaks.
 - [x] Gracefully handle missing NGINX site definitions by falling back to stored listen ports during menu rendering instead of aborting.
 - [x] Pause menu spinners around privileged commands so sudo password prompts stay visible during update checks.
+- [x] Guard menu spinner teardown so stopping a non-existent animation no longer raises exceptions during loading flows.
 - [x] Accept case-insensitive yes/no responses (including `1`/`0` and `on`/`off`) so prompt validation works regardless of the
       input casing users prefer.
 - [x] Stream NGINX site templates with `sudo tee` so doas-backed systems can't drop the config between generation and placement.
