@@ -178,7 +178,8 @@ class BaseMenu(metaclass=PostInitCaller):
             self.spinner = Spinner(self.loading_msg)
             self.spinner.start()
         else:
-            self.spinner.stop()
+            if self.spinner:
+                self.spinner.stop()
             self.spinner = None
 
     @contextmanager

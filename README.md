@@ -145,6 +145,7 @@ cd ~ && git clone https://github.com/postmarketOS-community/postmarketos-kiauh.g
 ### 🔄 Update menu UX
 
 - Loading spinners now pause automatically whenever `sudo` needs your password or the package manager prints interactive output, so update checks no longer obscure the prompt behind the animation.
+- Menu loading indicators now shut down safely even if they were never started, eliminating the `AttributeError` that previously appeared when a menu tried to stop a missing spinner.
 - Warning prompts across installers and extensions now route through the shared `Logger.print_warn` helper so the CLI surfaces consistent messaging.
 
 ### ♻️ Init system compatibility
