@@ -35,6 +35,7 @@
 - [x] Accept case-insensitive yes/no responses (including `1`/`0` and `on`/`off`) so prompt validation works regardless of the
       input casing users prefer.
 - [x] Stream NGINX site templates with `sudo tee` so doas-backed systems can't drop the config between generation and placement.
+- [x] Provision `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` on Alpine-style hosts and add an include so multiple dashboards remain loadable without rewriting `nginx.conf`.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.
 - [ ] Automate KlipperScreen smoke tests on postmarketOS handsets/tablets to validate display presets after updates.
 - [ ] Upstream missing Alpine packaging workarounds (e.g., `packagekit`, `libcamera-apps-lite`) to reduce custom steps.

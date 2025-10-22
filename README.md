@@ -162,6 +162,7 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 ### 🌐 NGINX layout detection
 
 - Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
+- When `/etc/nginx/sites-available` or `/etc/nginx/sites-enabled` is missing—as on stock Alpine images—the installer provisions both directories with `sudo install -d` and drops a `kiauh-sites.conf` include into the detected NGINX include directory so multiple dashboards (Mainsail, Fluidd, PrettyGCode, etc.) can coexist without rewriting `nginx.conf`.
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 - When an expected site definition is missing entirely, the menu falls back to the saved default port instead of crashing so you can still reinstall or reconfigure the client.
 - Fluidd's NGINX site definition now streams straight into place with `sudo tee`, sidestepping the tmpfile rename that `doas`-backed hosts occasionally lost before it reached `/etc/nginx`.
