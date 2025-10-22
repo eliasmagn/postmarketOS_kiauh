@@ -37,5 +37,6 @@ The project focuses on:
 - Writing console-safe Xwrapper policies on apk-based hosts so the OpenRC KlipperScreen service can bring up Xorg without elogind.
 - Hardening upstream launchers with default `KS_XCLIENT` fallbacks so ad-hoc invocations still boot the touch UI even when init systems skip the expected environment exports.
 - Defaulting installers to the minimum viable dependency footprint and offering optional extras as explicit opt-ins so mobile deployments stay lightweight.
+- Documenting a pmbootstrap workflow that selects the `none` UI preset so postmarketOS images stay lean while KIAUH layers the KlipperScreen-driven X11 session on top.
 
 As the scope expands beyond SBCs, we treat touch-first UX goals—gesture-ready launchers, portrait rotation defaults, and low-power service policies—as first-class citizens so postmarketOS phones and tablets can host Klipper without desktop-era compromises.
