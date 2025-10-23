@@ -9,12 +9,16 @@
 - ✅ Ship Wayland launcher presets for Phosh/Plasma along with auto-generated KlipperScreen display defaults so mobile shells behave out of the box.
 - ✅ Mirror Sxmo's wlroots session exports so Qualcomm msm8953 reference images boot KlipperScreen without manual environment tweaks.
 - ✅ Auto-configure KlipperScreen autostart across Phosh/Plasma desktops and OpenRC consoles while keeping Moonraker's update-manager systemd hints optional.
+- ✅ Auto-enable the generated Wayland user services by driving `systemctl --user` and OpenRC runlevel links so presets start without extra manual steps.
 - ✅ Publish postmarketOS-specific prerequisites covering SSH access, UI packages, and seat management so the new presets work on phones and tablets.
 - ✅ Replace KlipperScreen's upstream installer with an apk-aware wrapper so X11 and Wayland dependencies resolve correctly on postmarketOS.
 - ✅ Ship a native OpenRC KlipperScreen service so standalone installs boot directly into the UI without systemd dependencies.
 - ✅ Apply Xwrapper console permissions during apk installs so OpenRC-managed KlipperScreen services can start Xorg successfully.
 - ✅ Inject a default `KS_XCLIENT` fallback into `KlipperScreen-start.sh` so post-install services and manual runs always launch the UI.
 - ✅ Add a panorama orientation prompt that rewrites KlipperScreen defaults and installs an X11 helper so landscape-first panels initialise with horizontal resolutions.
+- ✅ Mirror postmarketOS' auto-rotation flow by shipping a monitor-sensor driven helper that rotates KlipperScreen outputs with wlr-randr/xrandr.
+- ✅ Harden the auto-rotation helper so it consumes launcher backend hints, waits for Wayland/X11 availability, and keeps console-first KlipperScreen installs working.
+- ✅ Keep KlipperScreen's panorama/default resolution overrides inside the `[main]` section so existing printer blocks no longer block the updated geometry.
 - ✅ Stage the Wayland preset helper after the backend selection so X11-first installs progress without unrelated prompts.
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.

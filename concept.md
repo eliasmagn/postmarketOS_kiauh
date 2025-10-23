@@ -25,6 +25,8 @@ The project focuses on:
 - Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, Sxmo, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Offering a panorama-orientation prompt that rewrites KlipperScreen defaults and seeds an X11 helper so wide touch panels report horizontal resolutions without extra manual tweaks.
+- Mirroring postmarketOS' `monitor-sensor` auto-rotation guidance with a KlipperScreen helper that spawns alongside the launcher, honours backend hints, waits for the target display server to come up, and rotates the selected output through `wlr-randr`/`xrandr` whenever the accelerometer fires.
+- Keeping KlipperScreen's width/height overrides anchored inside the `[main]` section so panorama mode and autodetected defaults stay effective even when printers add their own config blocks.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories or the absence of Debian-style site folders—so web interfaces install without manual path fixes.
 - Pre-provisioning `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` when they are missing and streaming generated site definitions directly into place with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—and proactively creating missing `conf.d` targets—then seeding them before writing the `kiauh-sites.conf` drop-in—so stock nginx configurations immediately load the generated sites without manual path fixes.
@@ -39,6 +41,7 @@ The project focuses on:
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, etc.) get a usable KlipperScreen session without manual environment plumbing.
 - Sequencing installer prompts so Wayland-specific choices only surface after the user opts into the Wayland backend, keeping the X11-first flow streamlined while preserving the option to revisit presets later.
 - Adapting KlipperScreen autostart to the surrounding shell—desktop environments receive `.desktop` launchers while console-only OpenRC systems get login hooks that wait for Moonraker before spawning the UI.
+- Auto-enabling the generated Wayland autostart services by talking to `systemd --user` when available or wiring OpenRC runlevel symlinks so fresh presets boot without manual follow-up.
 - Provisioning a first-party OpenRC service for KlipperScreen's standalone flow so console boots spawn the UI without relying on systemd units.
 - Writing console-safe Xwrapper policies on apk-based hosts so the OpenRC KlipperScreen service can bring up Xorg without elogind.
 - Hardening upstream launchers with default `KS_XCLIENT` fallbacks so ad-hoc invocations still boot the touch UI even when init systems skip the expected environment exports.
