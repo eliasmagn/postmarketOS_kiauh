@@ -13,7 +13,11 @@
 - [x] Extend the Wayland preset helper with an Sxmo wlroots profile so msm8953 reference images launch KlipperScreen reliably.
 - [x] Auto-detect built-in displays and pre-seed `KlipperScreen.conf` with size/orientation hints on first install.
 - [x] Add a panorama-mode prompt that rewrites KlipperScreen display defaults and seeds an X11 rotation helper during install.
+- [x] Ensure KlipperScreen panorama/default resolution updates stay within the `[main]` section so custom printer blocks don't swallow the overrides.
+- [x] Generate a postmarketOS-style auto-rotation helper that listens to `monitor-sensor` and rotates KlipperScreen outputs through `wlr-randr`/`xrandr`.
+- [x] Teach the auto-rotation helper to respect backend hints and wait for X11/Wayland availability so console-first installs keep working.
 - [x] Autostart KlipperScreen automatically on Phosh/Plasma desktops and OpenRC consoles without relying on systemd units.
+- [x] Enable generated Wayland services automatically by running `systemctl --user enable --now …` when available and wiring OpenRC runlevel symlinks, falling back to manual guidance on failure.
 - [x] Install and register a native OpenRC KlipperScreen service so standalone console installs boot directly into the UI.
 - [x] Ensure apk-based KlipperScreen X11 installs write Xwrapper permissions so OpenRC services can spawn Xorg without logind.
 - [x] Ensure the self-update routine repoints the KIAUH `origin` remote to the postmarketOS community fork by default while allowing `KIAUH_REPO_URL` overrides for personal forks.

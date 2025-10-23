@@ -15,7 +15,7 @@ from enum import Enum, auto
 from pathlib import Path
 from subprocess import CalledProcessError, run
 from textwrap import dedent
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from components.klipper.klipper import Klipper
 from components.klipperscreen import (
@@ -96,6 +96,76 @@ class AutostartResult:
     @property
     def uses_user_autostart(self) -> bool:
         return self.backend is not AutostartBackend.NONE or self.login_snippet is not None
+
+
+def _activate_autostart_backend(result: AutostartResult) -> None:
+    if result.backend is AutostartBackend.SYSTEMD_USER and result.backend_path is not None:
+        try:
+            run(["systemctl", "--user", "daemon-reload"], check=False)
+        except FileNotFoundError:
+            Logger.print_warn(
+                "systemctl not available in the current session; unable to refresh user units automatically.",
+            )
+            return
+
+        try:
+            run(
+                [
+                    "systemctl",
+                    "--user",
+                    "enable",
+                    "--now",
+                    result.backend_path.name,
+                ],
+                check=True,
+            )
+            Logger.print_ok(
+                f"Enabled user service {result.backend_path.name} so KlipperScreen starts immediately and on login.",
+            )
+        except CalledProcessError as err:
+            Logger.print_warn(
+                "Failed to enable the systemd user service automatically. Run "
+                f"'systemctl --user enable --now {result.backend_path.name}' manually."
+            )
+            Logger.print_error(str(err))
+        except FileNotFoundError:
+            Logger.print_warn(
+                "systemctl --user not found; skipping automatic service enablement.",
+            )
+    elif result.backend is AutostartBackend.OPENRC and result.backend_path is not None:
+        runlevels_dir = result.backend_path.parent.parent.joinpath("runlevels")
+        default_runlevel = runlevels_dir.joinpath("default")
+        try:
+            default_runlevel.mkdir(parents=True, exist_ok=True)
+        except OSError as err:
+            Logger.print_warn(
+                "Unable to prepare ~/.config/openrc/runlevels/default; KlipperScreen will not autostart until you link the service manually.",
+            )
+            Logger.print_error(str(err))
+            return
+
+        symlink_path = default_runlevel.joinpath(result.backend_path.name)
+        if symlink_path.exists():
+            if not symlink_path.is_symlink():
+                Logger.print_warn(
+                    f"Cannot link OpenRC user service; {symlink_path} already exists and is not a symlink.",
+                )
+                return
+            Logger.print_info(
+                "OpenRC user service already linked to the default runlevel.",
+            )
+            return
+
+        try:
+            symlink_path.symlink_to(result.backend_path)
+            Logger.print_ok(
+                f"Linked {result.backend_path.name} into the OpenRC default runlevel for automatic startup.",
+            )
+        except OSError as err:
+            Logger.print_warn(
+                "Failed to link the OpenRC user service automatically. Run 'ln -s' manually if needed.",
+            )
+            Logger.print_error(str(err))
 
 
 @dataclass
@@ -193,6 +263,7 @@ WAYLAND_PRESET_SKIP_KEY = "0"
 KLIPPERSCREEN_CONFIG_PATH = Path.home().joinpath("printer_data/config/KlipperScreen.conf")
 BACKEND_TRACK_FILENAME = ".kiauh-backend-choice"
 PANORAMA_SCRIPT_PATH = Path.home().joinpath(".config/klipperscreen/panorama-xrandr.sh")
+AUTOROTATE_SCRIPT_PATH = Path.home().joinpath(".config/klipperscreen/autorotate.sh")
 
 
 def _sync_installer_script_with_asset() -> None:
@@ -219,6 +290,7 @@ def _sync_installer_script_with_asset() -> None:
 
 _START_SCRIPT_SENTINEL = "# KIAUH fallback: ensure default client selection"
 _PANORAMA_SCRIPT_SENTINEL = "# KIAUH panorama orientation hook"
+_AUTOROTATE_SCRIPT_SENTINEL = "# KIAUH auto-rotation hook"
 
 
 def _ensure_start_script_client_fallback() -> None:
@@ -327,6 +399,77 @@ fi
         )
 
 
+def _ensure_autorotate_hook() -> None:
+    """Ensure KlipperScreen's launcher spawns the auto-rotation helper."""
+
+    script_path = KLIPPERSCREEN_DIR.joinpath("scripts/KlipperScreen-start.sh")
+    if not script_path.exists():
+        return
+
+    try:
+        content = script_path.read_text(encoding="utf-8")
+    except OSError:
+        return
+
+    if _AUTOROTATE_SCRIPT_SENTINEL in content:
+        return
+
+    anchor = (
+        'if [ -z "${KS_XCLIENT:-}" ]; then\n'
+        '    KS_XCLIENT="${KS_ENV}/bin/python ${KS_DIR}/screen.py"\n'
+        "fi"
+    )
+
+    if anchor not in content:
+        Logger.print_warn(
+            "Unable to inject auto-rotation helper hook because the start script "
+            "structure was not recognised.",
+        )
+        return
+
+    hook_block = dedent(
+        """
+# KIAUH auto-rotation hook
+if [ -z "${KIAUH_DISABLE_AUTOROTATE:-}" ]; then
+    AUTOROTATE_SCRIPT="${HOME}/.config/klipperscreen/autorotate.sh"
+    if [ -x "$AUTOROTATE_SCRIPT" ]; then
+        AUTOROTATE_HINT=""
+        if [ -n "${BACKEND:-}" ]; then
+            case "${BACKEND}" in
+                w|W|wayland|WAYLAND)
+                    AUTOROTATE_HINT="wayland"
+                    ;;
+                x|X|x11|X11)
+                    AUTOROTATE_HINT="x11"
+                    ;;
+            esac
+        fi
+        if [ -z "$AUTOROTATE_HINT" ]; then
+            if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+                AUTOROTATE_HINT="wayland"
+            elif [ -n "${DISPLAY:-}" ]; then
+                AUTOROTATE_HINT="x11"
+            fi
+        fi
+        KIAUH_AUTOROTATE_BACKEND="$AUTOROTATE_HINT" "$AUTOROTATE_SCRIPT" >/dev/null 2>&1 &
+    fi
+fi
+        """
+    ).rstrip()
+
+    updated = content.replace(anchor, f"{anchor}\n{hook_block}", 1)
+    try:
+        script_path.write_text(updated, encoding="utf-8")
+        Logger.print_info(
+            "Added auto-rotation hook to KlipperScreen-start.sh so sensor helpers "
+            "can follow orientation changes automatically.",
+        )
+    except OSError:
+        Logger.print_warn(
+            "Failed to update KlipperScreen-start.sh with auto-rotation hook.",
+        )
+
+
 def prompt_wayland_preset() -> Optional[WaylandPreset]:
     Logger.print_info(
         "KlipperScreen now ships Wayland session presets. Select the one that matches your "
@@ -357,23 +500,37 @@ def prompt_wayland_preset() -> Optional[WaylandPreset]:
 def configure_wayland_launchers(preset: WaylandPreset) -> AutostartResult:
     try:
         result = _configure_wayland_launchers_internal(preset)
+        if result.autostart_entry is None:
+            if get_confirm(
+                "No graphical shell detected. Create a generic autostart entry so KlipperScreen launches after login?",
+                default_choice=True,
+                allow_go_back=False,
+            ):
+                result.autostart_entry = _write_autostart_entry(
+                    result.wrapper_path,
+                    preset,
+                    shell="generic",
+                )
+                Logger.print_ok(
+                    "Generic autostart desktop entry stored under ~/.config/autostart.",
+                )
+
+        _activate_autostart_backend(result)
+
         Logger.print_ok(
             "Wayland launchers created in ~/.local/share/applications."
         )
         if result.backend is AutostartBackend.SYSTEMD_USER and result.backend_path is not None:
             Logger.print_info(
-                "Systemd user service stored in ~/.config/systemd/user. Enable it with "
-                f"'systemctl --user enable --now {result.backend_path.name}'."
+                "Systemd user service stored in ~/.config/systemd/user and enabled for this user."
             )
         elif result.backend is AutostartBackend.OPENRC and result.backend_path is not None:
             Logger.print_info(
-                "OpenRC user service stub created under ~/.config/openrc/init.d (add it "
-                "with rc-update to run automatically)."
+                "OpenRC user service stub created under ~/.config/openrc/init.d and linked to the default runlevel."
             )
         if result.autostart_entry is not None:
             Logger.print_info(
-                "Autostart desktop entry written to ~/.config/autostart for the "
-                "detected mobile shell."
+                "Autostart desktop entry written to ~/.config/autostart."
             )
         if result.login_snippet is not None:
             Logger.print_info(
@@ -819,6 +976,79 @@ def _looks_like_internal_connector(name: str) -> bool:
     return any(token in lowered for token in ("edp", "dsi", "lvds", "panel", "default"))
 
 
+def _ensure_main_section(lines: List[str]) -> Tuple[int, int]:
+    """Ensure a [main] section exists and return its bounds."""
+
+    header = "[main]"
+    main_start: Optional[int] = None
+    comment_end = 0
+    first_content_idx: Optional[int] = None
+
+    for idx, raw_line in enumerate(lines):
+        stripped = raw_line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if stripped == header:
+                main_start = idx
+                break
+            if first_content_idx is None:
+                first_content_idx = idx
+        elif not stripped or stripped.startswith("#"):
+            if main_start is None and first_content_idx is None:
+                comment_end = idx + 1
+        else:
+            if first_content_idx is None:
+                first_content_idx = idx
+
+    if main_start is None:
+        insertion_idx = first_content_idx if first_content_idx is not None else comment_end
+        lines.insert(insertion_idx, header)
+        main_start = insertion_idx
+
+    for idx in range(main_start + 1, len(lines)):
+        stripped = lines[idx].strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            return main_start, idx
+    return main_start, len(lines)
+
+
+def _ensure_main_option(lines: List[str], key: str, value: str) -> bool:
+    """Set or insert an option inside the [main] section."""
+
+    changed = False
+    main_start, main_end = _ensure_main_section(lines)
+    target = f"{key}:"
+
+    for idx in range(main_start + 1, main_end):
+        if lines[idx].startswith(target):
+            new_line = f"{target} {value}"
+            if lines[idx] != new_line:
+                lines[idx] = new_line
+                changed = True
+            return changed
+
+    lines.insert(main_end, f"{target} {value}")
+    return True
+
+
+def _ensure_main_comment(lines: List[str], prefix: str, value: str) -> bool:
+    """Ensure a comment with the given prefix is present in [main]."""
+
+    changed = False
+    main_start, main_end = _ensure_main_section(lines)
+    target = f"# {prefix}:"
+    desired = f"{target} {value}"
+
+    for idx in range(main_start + 1, main_end):
+        if lines[idx].startswith(target):
+            if lines[idx] != desired:
+                lines[idx] = desired
+                changed = True
+            return changed
+
+    lines.insert(main_end, desired)
+    return True
+
+
 def _extract_resolution(line: str) -> Optional[tuple[int, int]]:
     match = re.search(r"(\d{3,4})x(\d{3,4})", line)
     if match:
@@ -862,16 +1092,13 @@ def preseed_klipperscreen_config(display: DisplayInfo) -> None:
         return
 
     existing = KLIPPERSCREEN_CONFIG_PATH.read_text(encoding="utf-8").splitlines()
-    updated = False
-    if not any(line.startswith("width:") for line in existing):
-        existing.append(width_line)
-        updated = True
-    if not any(line.startswith("height:") for line in existing):
-        existing.append(height_line)
-        updated = True
-    if rotation_hint not in existing:
-        existing.append(rotation_hint)
-        updated = True
+    updated = _ensure_main_option(existing, "width", str(display.width))
+    updated |= _ensure_main_option(existing, "height", str(display.height))
+    updated |= _ensure_main_comment(
+        existing,
+        "rotation_hint",
+        str(display.rotation if display.rotation is not None else 0),
+    )
     if updated:
         KLIPPERSCREEN_CONFIG_PATH.write_text("\n".join(existing) + "\n", encoding="utf-8")
         Logger.print_ok("Updated KlipperScreen.conf with detected display defaults.")
@@ -884,29 +1111,19 @@ def _apply_panorama_config(width: int, height: int) -> None:
     else:
         lines = ["[main]"]
 
-    def _set_or_append(prefix: str, value: str) -> None:
-        target = f"{prefix}:"
-        for idx, line in enumerate(lines):
-            if line.startswith(target):
-                lines[idx] = f"{target} {value}"
-                return
-        lines.append(f"{target} {value}")
+    updated = _ensure_main_option(lines, "width", str(width))
+    updated |= _ensure_main_option(lines, "height", str(height))
+    updated |= _ensure_main_comment(lines, "rotation_hint", "0")
 
-    _set_or_append("width", str(width))
-    _set_or_append("height", str(height))
-
-    rotation_line = "# rotation_hint: 0"
-    for idx, line in enumerate(lines):
-        if line.startswith("# rotation_hint:"):
-            lines[idx] = rotation_line
-            break
+    if updated:
+        KLIPPERSCREEN_CONFIG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        Logger.print_ok(
+            f"KlipperScreen.conf updated for panorama mode ({width}x{height})."
+        )
     else:
-        lines.append(rotation_line)
-
-    KLIPPERSCREEN_CONFIG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    Logger.print_ok(
-        f"KlipperScreen.conf updated for panorama mode ({width}x{height})."
-    )
+        Logger.print_info(
+            "Panorama resolution already matches the requested values; keeping existing KlipperScreen.conf."
+        )
 
 
 def _write_panorama_script(output_name: str, width: int, height: int) -> None:
@@ -924,6 +1141,219 @@ fi
     os.chmod(PANORAMA_SCRIPT_PATH, 0o755)
     Logger.print_ok(
         f"Panorama X11 helper stored at {PANORAMA_SCRIPT_PATH.as_posix()}."
+    )
+
+
+def _write_autorotate_script(output_name: str) -> None:
+    AUTOROTATE_SCRIPT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    quoted_output = shlex.quote(output_name)
+    script = dedent(
+        f"""#!/bin/sh
+# Auto-generated by KIAUH to follow postmarketOS auto-rotation guidance for KlipperScreen.
+set -eu
+
+OUTPUT={quoted_output}
+
+RUNTIME_DIR="${{XDG_RUNTIME_DIR:-}}"
+if [ -z "$RUNTIME_DIR" ]; then
+    RUNTIME_DIR="${{HOME}}/.cache"
+fi
+PID_BASE="$RUNTIME_DIR/kiauh"
+mkdir -p "$PID_BASE"
+PIDFILE="$PID_BASE/klipperscreen-autorotate.pid"
+
+if [ -f "$PIDFILE" ]; then
+    old_pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        exit 0
+    fi
+fi
+
+echo "$$" > "$PIDFILE"
+cleanup() {{
+    rm -f "$PIDFILE"
+}}
+trap cleanup EXIT INT TERM
+
+if ! command -v monitor-sensor >/dev/null 2>&1; then
+    exit 0
+fi
+
+normalize_backend() {{
+    case "$1" in
+        wayland|WAYLAND|w|W)
+            NORMALIZED_BACKEND="wayland"
+            return 0
+            ;;
+        x11|X11|x|X)
+            NORMALIZED_BACKEND="x11"
+            return 0
+            ;;
+    esac
+    NORMALIZED_BACKEND=""
+    return 1
+}}
+
+try_backend() {{
+    candidate="$1"
+    if [ -z "$candidate" ]; then
+        return 1
+    fi
+    if ! normalize_backend "$candidate"; then
+        return 1
+    fi
+    case "$NORMALIZED_BACKEND" in
+        wayland)
+            if command -v wlr-randr >/dev/null 2>&1; then
+                BACKEND_MODE="wayland"
+                BACKEND_COMMAND="wlr-randr"
+                return 0
+            fi
+            ;;
+        x11)
+            if command -v xrandr >/dev/null 2>&1; then
+                BACKEND_MODE="x11"
+                BACKEND_COMMAND="xrandr"
+                return 0
+            fi
+            ;;
+    esac
+    return 1
+}}
+
+detect_backend_once() {{
+    if try_backend "${{KIAUH_AUTOROTATE_BACKEND:-}}"; then
+        return 0
+    fi
+    if try_backend "${{BACKEND:-}}"; then
+        return 0
+    fi
+    if [ -n "${{WAYLAND_DISPLAY:-}}" ] && try_backend "wayland"; then
+        return 0
+    fi
+    if [ -n "${{DISPLAY:-}}" ] && try_backend "x11"; then
+        return 0
+    fi
+    return 1
+}}
+
+BACKEND_MODE=""
+BACKEND_COMMAND=""
+
+i=0
+while [ $i -lt 30 ]; do
+    if detect_backend_once; then
+        break
+    fi
+    i=$((i + 1))
+    sleep 1
+done
+
+if [ -z "$BACKEND_MODE" ]; then
+    exit 0
+fi
+
+wait_for_backend_ready() {{
+    case "$BACKEND_MODE" in
+        wayland)
+            j=0
+            while [ $j -lt 30 ]; do
+                if "$BACKEND_COMMAND" >/dev/null 2>&1; then
+                    return 0
+                fi
+                j=$((j + 1))
+                sleep 1
+            done
+            ;;
+        x11)
+            j=0
+            while [ $j -lt 30 ]; do
+                if "$BACKEND_COMMAND" >/dev/null 2>&1; then
+                    return 0
+                fi
+                j=$((j + 1))
+                sleep 1
+            done
+            ;;
+    esac
+    return 1
+}}
+
+wait_for_backend_ready || true
+
+LAST_ORIENTATION=""
+
+apply_rotation() {{
+    orientation="$1"
+    if [ -z "$orientation" ]; then
+        return
+    fi
+    if [ "$orientation" = "$LAST_ORIENTATION" ]; then
+        return
+    fi
+    case "$orientation" in
+        normal)
+            LAST_ORIENTATION="$orientation"
+            if [ "$BACKEND_MODE" = "wayland" ]; then
+                wlr-randr --output {quoted_output} --transform normal >/dev/null 2>&1 || true
+            else
+                xrandr --output {quoted_output} --rotate normal >/dev/null 2>&1 || true
+            fi
+            ;;
+        bottom-up)
+            LAST_ORIENTATION="$orientation"
+            if [ "$BACKEND_MODE" = "wayland" ]; then
+                wlr-randr --output {quoted_output} --transform 180 >/dev/null 2>&1 || true
+            else
+                xrandr --output {quoted_output} --rotate inverted >/dev/null 2>&1 || true
+            fi
+            ;;
+        left-up)
+            LAST_ORIENTATION="$orientation"
+            if [ "$BACKEND_MODE" = "wayland" ]; then
+                wlr-randr --output {quoted_output} --transform 90 >/dev/null 2>&1 || true
+            else
+                xrandr --output {quoted_output} --rotate right >/dev/null 2>&1 || true
+            fi
+            ;;
+        right-up)
+            LAST_ORIENTATION="$orientation"
+            if [ "$BACKEND_MODE" = "wayland" ]; then
+                wlr-randr --output {quoted_output} --transform 270 >/dev/null 2>&1 || true
+            else
+                xrandr --output {quoted_output} --rotate left >/dev/null 2>&1 || true
+            fi
+            ;;
+        *)
+            LAST_ORIENTATION="$orientation"
+            ;;
+    esac
+}}
+
+initial_line="$(monitor-sensor --orientation 2>/dev/null | tail -n 1)"
+case "$initial_line" in
+    *orientation*)
+        initial_value="${{initial_line##*: }}"
+        initial_value="${{initial_value%% *}}"
+        apply_rotation "$initial_value"
+        ;;
+    esac
+
+monitor-sensor 2>/dev/null | while read -r line; do
+    case "$line" in
+        *orientation*)
+            value="${{line##*: }}"
+            value="${{value%% *}}"
+            apply_rotation "$value"
+            ;;
+    esac
+done
+"""
+    )
+    AUTOROTATE_SCRIPT_PATH.write_text(script, encoding="utf-8")
+    os.chmod(AUTOROTATE_SCRIPT_PATH, 0o755)
+    Logger.print_ok(
+        f"Auto-rotation helper stored at {AUTOROTATE_SCRIPT_PATH.as_posix()}.",
     )
 
 
@@ -981,6 +1411,57 @@ def prompt_panorama_mode(display: Optional[DisplayInfo]) -> None:
         "Panorama mode enabled. Re-run the installer if you need to adjust "
         "the resolution or output name."
     )
+    try:
+        cmd_sysctl_service(KLIPPERSCREEN_SERVICE_NAME, "restart")
+    except CalledProcessError:
+        Logger.print_warn(
+            "Unable to restart the KlipperScreen service automatically; restart it manually if it is running."
+        )
+
+
+def prompt_auto_rotation(display: Optional[DisplayInfo]) -> None:
+    enable = get_confirm(
+        "Enable sensor-based auto-rotation for KlipperScreen?",
+        default_choice=False,
+        allow_go_back=False,
+    )
+    if not enable:
+        return
+
+    default_output = display.name if display is not None else None
+    output_prompt = "Enter the output name to rotate when the sensor triggers"
+    output_name = get_string_input(
+        output_prompt,
+        allow_empty=False,
+        default=default_output,
+        allow_special_chars=True,
+    )
+
+    _write_autorotate_script(output_name)
+    _ensure_autorotate_hook()
+
+    if shutil.which("monitor-sensor") is None:
+        Logger.print_warn(
+            "monitor-sensor not found. Install iio-sensor-proxy as outlined in the postmarketOS auto-rotation guide so orientation events are emitted.",
+        )
+    else:
+        Logger.print_info(
+            "monitor-sensor detected; KlipperScreen will follow rotation events when the helper is running.",
+        )
+
+    if shutil.which("wlr-randr") is None and shutil.which("xrandr") is None:
+        Logger.print_warn(
+            "Neither wlr-randr nor xrandr was detected. Install one of them so the auto-rotation helper can adjust the display output.",
+        )
+
+    try:
+        cmd_sysctl_service(KLIPPERSCREEN_SERVICE_NAME, "restart")
+        Logger.print_info("Restarted KlipperScreen to load the auto-rotation helper.")
+    except CalledProcessError:
+        Logger.print_warn(
+            "Unable to restart the KlipperScreen service automatically; restart it manually so auto-rotation takes effect.",
+        )
+
 
 
 def _read_backend_choice(path: Path) -> Optional[str]:
@@ -1028,6 +1509,7 @@ def install_klipperscreen() -> None:
     _sync_installer_script_with_asset()
     _ensure_start_script_client_fallback()
     _ensure_panorama_hook()
+    _ensure_autorotate_hook()
 
     backend_track_path = KLIPPERSCREEN_INSTALL_SCRIPT.parent.joinpath(
         BACKEND_TRACK_FILENAME
@@ -1100,6 +1582,7 @@ def install_klipperscreen() -> None:
         if display_info is not None:
             preseed_klipperscreen_config(display_info)
         prompt_panorama_mode(display_info)
+        prompt_auto_rotation(display_info)
         Logger.print_ok("KlipperScreen successfully installed!")
     except CalledProcessError as e:
         Logger.print_error(f"Error installing KlipperScreen:\n{e}")
@@ -1153,6 +1636,7 @@ def update_klipperscreen() -> None:
         git_pull_wrapper(KLIPPERSCREEN_DIR)
         _ensure_start_script_client_fallback()
         _ensure_panorama_hook()
+        _ensure_autorotate_hook()
 
         install_python_requirements(KLIPPERSCREEN_ENV_DIR, KLIPPERSCREEN_REQ_FILE)
 

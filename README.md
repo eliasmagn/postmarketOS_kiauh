@@ -215,7 +215,9 @@ repository:
   can spawn KlipperScreen with the expected Wayland flags.
 - When a Phosh or Plasma Mobile session is detected at install time, a matching
   autostart entry is written to `~/.config/autostart/` so the wrapper launches
-  automatically on login.
+  automatically on login. If KIAUH cannot detect the shell—for example when you
+  run the installer over SSH—it now offers to generate a generic autostart entry
+  so the session still comes up automatically after the next login.
 - On OpenRC consoles without a graphical shell, a login snippet in
   `~/.config/profile.d/` waits for Moonraker to respond before spawning
   KlipperScreen.
@@ -225,18 +227,32 @@ repository:
   package exports, ensuring Qualcomm msm8953 reference images can launch
   KlipperScreen without additional wrappers.
 
-Systemd users can enable the service immediately:
+KIAUH now enables the generated autostart integration automatically:
 
-```sh
-systemctl --user enable --now klipperscreen-phosh.service
-```
-
-OpenRC users need to symlink the generated service script into their preferred
-runlevel (for example `~/.config/openrc/runlevels/default/`).
+- `systemd --user` services are enabled and started with
+  `systemctl --user enable --now …` as part of the preset helper. If the helper
+  cannot talk to the user service manager (for example because DBus is not
+  available), it will print the exact command so you can run it manually later.
+- OpenRC user services are symlinked into
+  `~/.config/openrc/runlevels/default/` for you. Should the directory already
+  contain a conflicting file, the helper prints instructions for creating the
+  link manually.
 
 The launcher presets are additive—the existing system instance managed by KIAUH
 remains untouched—so you can try the Wayland session without disrupting the
 original install.
+
+### 🖼 Panorama (landscape) mode refresher
+
+When you enable panorama mode from the KlipperScreen installer menu, KIAUH now
+updates `KlipperScreen.conf`, regenerates the X11 helper script, and attempts to
+restart the system KlipperScreen service so the new resolution takes effect
+immediately. If restarting the service fails (for example because it is running
+as a user unit), the log highlights the next steps so you can restart it
+manually. The updated writer now places the width/height overrides inside the
+`[main]` section even when custom printer blocks exist, so KlipperScreen applies
+the new geometry on the next launch. You can re-run the installer menu at any
+time to adjust the recorded resolution or output name.
 
 ### 🧹 Minimal KlipperScreen footprint
 
@@ -266,9 +282,10 @@ by future updates.
 
 If `wlr-randr` or `weston-info` is present, KIAUH now detects the built-in
 display during installation. The detected width, height, and rotation hint are
-written to `~/printer_data/config/KlipperScreen.conf` (or appended if the file
-already exists). Adjust the values if your compositor applies additional
-scaling, or if you rotate the panel within Phosh/Plasma settings.
+written to `~/printer_data/config/KlipperScreen.conf` (or appended within the
+existing `[main]` section if the file already exists). Adjust the values if
+your compositor applies additional scaling, or if you rotate the panel within
+Phosh/Plasma settings.
 
 Touch rotation is still handled by the compositor—follow the upstream
 troubleshooting guide if pointer coordinates do not align after rotating.
@@ -278,13 +295,35 @@ troubleshooting guide if pointer coordinates do not align after rotating.
 - During installation KIAUH now asks whether KlipperScreen should run in a
   panorama (horizontal) layout. Opting in rewrites the width/height defaults in
   `KlipperScreen.conf`, ensuring wide touch panels advertise the correct
-  horizontal resolution to the UI.
+  horizontal resolution from the `[main]` section even when other printer
+  profiles are present.
 - The same prompt seeds an executable helper under
   `~/.config/klipperscreen/panorama-xrandr.sh`. When the X11 backend is active
   the patched launcher executes this helper before starting KlipperScreen so the
   selected output is configured with the requested mode and rotation.
 - You can rerun the KlipperScreen installer at any time to tweak the panorama
   resolution or disable the helper by removing the script.
+
+### 📱 Sensor-driven auto-rotation
+
+- After panorama mode, the installer now offers to mirror the
+  [postmarketOS auto-rotation workflow](https://wiki.postmarketos.org/wiki/Auto-rotation)
+  for KlipperScreen. Opting in writes `~/.config/klipperscreen/autorotate.sh`, a
+  helper that listens to `monitor-sensor` events from `iio-sensor-proxy` and
+  applies orientation changes via `wlr-randr` (Wayland) or `xrandr` (X11).
+- The helper now understands both pure X11 console launches and desktop Wayland
+  sessions. It consumes backend hints from the launcher, waits for the target
+  display server to become ready, and falls back gracefully when neither
+  `wlr-randr` nor `xrandr` is present.
+- The KlipperScreen launcher loads the helper in the background on every start.
+  Set `KIAUH_DISABLE_AUTOROTATE=1` before launching if you need to pause the
+  sensor listener temporarily.
+- To override the automatic backend detection entirely, export
+  `KIAUH_AUTOROTATE_BACKEND=x11` (or `wayland`) before starting KlipperScreen.
+- Because the helper relies on `monitor-sensor`, KIAUH highlights when the
+  binary is missing so you can install `iio-sensor-proxy` before expecting
+  rotation events. The log also warns when neither `wlr-randr` nor `xrandr` is
+  available, giving you a chance to install the appropriate output utility.
 
 <h2 align="center">📦 Debian ➜ Alpine package map</h2>
 
