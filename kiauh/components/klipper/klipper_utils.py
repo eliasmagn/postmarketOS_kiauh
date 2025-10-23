@@ -49,6 +49,7 @@ from utils.sys_utils import (
     install_python_packages,
     parse_packages_from_file,
 )
+from utils.sudo_session import ensure_sudo_session
 
 
 def get_klipper_status() -> ComponentStatus:
@@ -119,6 +120,7 @@ def check_user_groups() -> None:
         return
 
     try:
+        ensure_sudo_session()
         for group in missing_groups:
             Logger.print_status(f"Adding user '{CURRENT_USER}' to group {group} ...")
             command = ["sudo", "usermod", "-a", "-G", group, CURRENT_USER]

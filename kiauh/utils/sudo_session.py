@@ -11,6 +11,29 @@ from core.logger import Logger
 from utils.input_utils import get_confirm
 
 
+_GLOBAL_SESSION: "SudoSession" | None = None
+
+
+def get_sudo_session() -> "SudoSession":
+    global _GLOBAL_SESSION
+    if _GLOBAL_SESSION is None:
+        _GLOBAL_SESSION = SudoSession()
+    return _GLOBAL_SESSION
+
+
+def ensure_sudo_session() -> None:
+    session = get_sudo_session()
+    session.ensure_active()
+
+
+def shutdown_sudo_session() -> None:
+    global _GLOBAL_SESSION
+    if _GLOBAL_SESSION is None:
+        return
+    _GLOBAL_SESSION.close()
+    _GLOBAL_SESSION = None
+
+
 class SudoSession:
     """Cache sudo credentials for the lifetime of a KIAUH session."""
 
@@ -20,9 +43,10 @@ class SudoSession:
         self._enabled = False
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
+        self._refresh_cmd: list[str] | None = ["sudo", "-n", "-v"]
 
-    def maybe_enable(self) -> None:
-        """Ask the user whether KIAUH should keep sudo alive for this run."""
+    def ensure_active(self) -> None:
+        """Prompt for caching when first sudo access is required."""
 
         if self._prompted:
             return
@@ -50,19 +74,35 @@ class SudoSession:
         Logger.print_status("Priming sudo credential cache ...")
 
         try:
-            result = subprocess.run(["sudo", "-v"])
+            result = subprocess.run(
+                ["sudo", "-v"], capture_output=True, text=True
+            )
         except KeyboardInterrupt:
-            Logger.print_warn("Cancelled sudo credential caching. Continuing without it.")
+            Logger.print_warn(
+                "Cancelled sudo credential caching. Continuing without it."
+            )
             return
 
         if result.returncode != 0:
-            Logger.print_warn(
-                "Unable to cache sudo credentials. Commands will prompt as usual."
-            )
+            if self._is_option_unsupported(result.stderr):
+                Logger.print_warn(
+                    "This sudo implementation does not support credential caching."
+                )
+            else:
+                Logger.print_warn(
+                    "Unable to cache sudo credentials. Commands will prompt as usual."
+                )
             return
 
         self._enabled = True
         Logger.print_ok("Cached sudo credentials for this session.")
+
+        self._refresh_cmd = self._select_refresh_command()
+        if self._refresh_cmd is None:
+            Logger.print_warn(
+                "Automatic sudo refresh is unavailable. Credentials may expire during this session."
+            )
+            return
 
         self._thread = threading.Thread(target=self._refresh_loop, daemon=True)
         self._thread.start()
@@ -85,13 +125,50 @@ class SudoSession:
         self._stop_event.clear()
 
     def _refresh_loop(self) -> None:
+        if self._refresh_cmd is None:
+            return
+
         while not self._stop_event.wait(self.refresh_interval):
             result = subprocess.run(
-                ["sudo", "-n", "-v"], stdout=DEVNULL, stderr=DEVNULL
+                self._refresh_cmd,
+                stdout=DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
             )
-            if result.returncode != 0:
-                Logger.print_warn(
-                    "The cached sudo credentials expired. Future commands may prompt again."
-                )
-                self._enabled = False
-                return
+            if result.returncode == 0:
+                continue
+
+            if self._is_option_unsupported(result.stderr) and self._refresh_cmd != [
+                "sudo",
+                "-v",
+            ]:
+                self._refresh_cmd = ["sudo", "-v"]
+                continue
+
+            Logger.print_warn(
+                "The cached sudo credentials expired. Future commands may prompt again."
+            )
+            self._enabled = False
+            return
+
+    @staticmethod
+    def _is_option_unsupported(stderr: str | None) -> bool:
+        if not stderr:
+            return False
+        stderr_lower = stderr.lower()
+        return "unrecognized option" in stderr_lower or "invalid option" in stderr_lower
+
+    def _select_refresh_command(self) -> list[str] | None:
+        candidates = [["sudo", "-n", "-v"], ["sudo", "-v"]]
+        for cmd in candidates:
+            result = subprocess.run(
+                cmd,
+                stdout=DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            if result.returncode == 0:
+                return cmd
+            if not self._is_option_unsupported(result.stderr):
+                break
+        return None

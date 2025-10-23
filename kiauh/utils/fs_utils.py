@@ -20,6 +20,7 @@ from zipfile import ZipFile
 
 from core.decorators import deprecated
 from core.logger import Logger
+from utils.sudo_session import ensure_sudo_session
 
 
 def check_file_exist(file_path: Path, sudo=False) -> bool:
@@ -30,6 +31,7 @@ def check_file_exist(file_path: Path, sudo=False) -> bool:
     :return: True, if file exists, otherwise False
     """
     if sudo:
+        ensure_sudo_session()
         command = ["sudo", "find", file_path.as_posix()]
         try:
             check_output(command, stderr=DEVNULL)
@@ -47,6 +49,7 @@ def create_symlink(source: Path, target: Path, sudo=False) -> None:
     try:
         cmd = ["ln", "-sf", source.as_posix(), target.as_posix()]
         if sudo:
+            ensure_sudo_session()
             cmd.insert(0, "sudo")
         run(cmd, stderr=PIPE, check=True)
     except CalledProcessError as e:
@@ -64,6 +67,7 @@ def remove_with_sudo(files: Path | List[Path]) -> bool:
 
     for f in _files:
         try:
+            ensure_sudo_session()
             cmd = ["sudo", "find", f.as_posix()]
             if call(cmd, stderr=DEVNULL, stdout=DEVNULL) == 1:
                 Logger.print_info(f"File '{f}' does not exist. Skipped ...")
@@ -81,6 +85,8 @@ def remove_with_sudo(files: Path | List[Path]) -> bool:
 @deprecated(info="Use remove_with_sudo instead", replaced_by=remove_with_sudo)
 def remove_file(file_path: Path, sudo=False) -> None:
     try:
+        if sudo:
+            ensure_sudo_session()
         cmd = f"{'sudo ' if sudo else ''}rm -f {file_path}"
         run(cmd, stderr=PIPE, check=True, shell=True)
     except CalledProcessError as e:
