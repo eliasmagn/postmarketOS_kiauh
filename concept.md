@@ -20,7 +20,8 @@ The project focuses on:
 - Shipping an apt-compatible Moonraker update-manager drop-in for apk-based installs so the Update Manager keeps working without PackageKit while the policykit helper remains intact.
 - Replacing upstream-only installers with apk-aware shims when necessary so features like KlipperScreen's X11 session remain first-class citizens alongside the newer Wayland presets.
 - Ensuring CLI feedback remains accessible by pausing spinner-driven status messages whenever privileged prompts appear, keeping sudo password requests visible during update flows.
-- Offering optional sudo credential caching so a single consent keeps privileged tasks moving while KIAUH clears the timestamp again on exit.
+- Offering optional sudo credential caching that only prompts the first time a privileged action runs, keeping tasks moving after a single consent while clearing the timestamp again on exit.
+- Detecting minimal sudo shims that lack timestamp management flags and gracefully skipping the caching flow so unsupported option errors never interrupt menu rendering.
 - Guarding loading indicator teardown so menus can dismiss spinners even when the animation never started, preventing stray exceptions from interrupting long-running update flows.
 - Detecting the active init system and routing all service lifecycle operations through a shared abstraction so that both systemd and OpenRC hosts behave identically.
 - Surfacing mobile-shell aware launch presets and display heuristics so touch-friendly environments (Phosh, Plasma Mobile, Sxmo, etc.) get a usable KlipperScreen session without manual environment plumbing.

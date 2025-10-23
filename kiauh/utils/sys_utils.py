@@ -27,6 +27,7 @@ from core.constants import OPENRC, SYSTEMD
 from core.logger import Logger
 from utils.fs_utils import check_file_exist, remove_with_sudo
 from utils.input_utils import get_confirm
+from utils.sudo_session import ensure_sudo_session
 
 SysCtlServiceAction = Literal[
     "start",
@@ -442,6 +443,7 @@ def update_system_package_lists(silent: bool, rls_info_change=False) -> None:
             Logger.print_status("Updating package list...")
 
         try:
+            ensure_sudo_session()
             command = ["sudo", "apt-get", "update"]
             if rls_info_change:
                 command.append("--allow-releaseinfo-change")
@@ -463,6 +465,7 @@ def update_system_package_lists(silent: bool, rls_info_change=False) -> None:
             Logger.print_status("Updating package list...")
 
         try:
+            ensure_sudo_session()
             command = ["sudo", "apk", "update"]
             result = run(command, stderr=PIPE, text=True)
             if result.returncode != 0:
@@ -573,9 +576,11 @@ def install_system_packages(packages: List[str]) -> None:
 
     try:
         if manager == PackageManager.APT:
+            ensure_sudo_session()
             command = ["sudo", "apt-get", "install", "-y"] + packages_to_install
             run(command, stderr=PIPE, check=True)
         elif manager == PackageManager.APK:
+            ensure_sudo_session()
             command = ["sudo", "apk", "add", "--no-cache"] + packages_to_install
             run(command, stderr=PIPE, check=True, text=True)
         else:
@@ -605,9 +610,11 @@ def upgrade_system_packages(packages: List[str]) -> None:
 
     try:
         if manager == PackageManager.APT:
+            ensure_sudo_session()
             command = ["sudo", "apt-get", "upgrade", "-y"] + packages_to_upgrade
             run(command, stderr=PIPE, check=True)
         elif manager == PackageManager.APK:
+            ensure_sudo_session()
             command = ["sudo", "apk", "upgrade"] + packages_to_upgrade
             run(command, stderr=PIPE, check=True, text=True)
         else:
@@ -705,10 +712,12 @@ def set_nginx_permissions() -> None:
 
 def _cmd_rc_service(name: str, action: SysCtlServiceAction) -> None:
     if action in {"start", "stop", "restart", "reload"}:
+        ensure_sudo_session()
         run(["sudo", "rc-service", name, action], stderr=PIPE, check=True)
         return
 
     if action in {"enable", "unmask"}:
+        ensure_sudo_session()
         run(["sudo", "rc-update", "add", name, "default"], stderr=PIPE, check=True)
         if action == "unmask":
             Logger.print_warn(
@@ -717,6 +726,7 @@ def _cmd_rc_service(name: str, action: SysCtlServiceAction) -> None:
         return
 
     if action in {"disable", "mask"}:
+        ensure_sudo_session()
         run(["sudo", "rc-update", "del", name, "default"], stderr=PIPE, check=True)
         if action == "mask":
             Logger.print_warn(
@@ -738,6 +748,7 @@ def cmd_sysctl_service(name: str, action: SysCtlServiceAction) -> None:
         Logger.print_status(f"{action.capitalize()} {name} ...")
         init_system = get_init_system()
         if init_system == InitSystem.SYSTEMD:
+            ensure_sudo_session()
             run(["sudo", "systemctl", action, name], stderr=PIPE, check=True)
         elif init_system == InitSystem.OPENRC:
             _cmd_rc_service(name, action)
@@ -754,6 +765,7 @@ def cmd_sysctl_manage(action: SysCtlManageAction) -> None:
     init_system = get_init_system()
     if init_system == InitSystem.SYSTEMD:
         try:
+            ensure_sudo_session()
             run(["sudo", "systemctl", action], stderr=PIPE, check=True)
         except CalledProcessError as e:
             log = f"Failed to run {action}: {e.stderr.decode()}"
@@ -821,6 +833,7 @@ def create_service_file(name: str, content: str) -> None:
     try:
         service_dir = get_service_directory()
         target_path = service_dir.joinpath(name)
+        ensure_sudo_session()
         run(
             ["sudo", "tee", target_path],
             input=content.encode(),
@@ -828,6 +841,7 @@ def create_service_file(name: str, content: str) -> None:
             check=True,
         )
         if get_init_system() == InitSystem.OPENRC:
+            ensure_sudo_session()
             run(["sudo", "chmod", "+x", target_path], check=True)
         Logger.print_ok(f"Service file created: {target_path}")
     except CalledProcessError as e:

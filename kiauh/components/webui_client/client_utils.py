@@ -45,6 +45,7 @@ from utils.git_utils import (
 )
 from utils.input_utils import get_number_input
 from utils.instance_utils import get_instances
+from utils.sudo_session import ensure_sudo_session
 
 
 def get_client_status(
@@ -317,6 +318,7 @@ def _ensure_nginx_sites_include() -> None:
         Logger.print_status(
             f"Linking {NGINX_SITES_ENABLED} into nginx via {include_file.name} ..."
         )
+        ensure_sudo_session()
         command = ["sudo", "tee", str(include_file)]
         run(
             command,
@@ -343,6 +345,7 @@ def ensure_nginx_site_layout() -> None:
                 continue
 
             Logger.print_status(f"Creating missing nginx directory {directory} ...")
+            ensure_sudo_session()
             command = ["sudo", "install", "-d", "-m", "755", str(directory)]
             run(command, stderr=PIPE, check=True)
             Logger.print_ok(f"Directory {directory} created.")
@@ -362,6 +365,7 @@ def _ensure_nginx_confd() -> None:
 
     try:
         Logger.print_status(f"Creating missing nginx directory {NGINX_CONFD} ...")
+        ensure_sudo_session()
         command = ["sudo", "install", "-d", "-m", "755", str(NGINX_CONFD)]
         run(command, stderr=PIPE, check=True)
         Logger.print_ok(f"Directory {NGINX_CONFD} created.")
@@ -380,6 +384,7 @@ def copy_upstream_nginx_cfg() -> None:
     target = NGINX_CONFD.joinpath("upstreams.conf")
     try:
         _ensure_nginx_confd()
+        ensure_sudo_session()
         command = ["sudo", "cp", source, target]
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as e:
@@ -397,6 +402,7 @@ def copy_common_vars_nginx_cfg() -> None:
     target = NGINX_CONFD.joinpath("common_vars.conf")
     try:
         _ensure_nginx_confd()
+        ensure_sudo_session()
         command = ["sudo", "cp", source, target]
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as e:
@@ -422,6 +428,7 @@ def generate_nginx_cfg_from_template(name: str, template_src: Path, **kwargs) ->
     target = NGINX_SITES_AVAILABLE.joinpath(name)
 
     try:
+        ensure_sudo_session()
         command = ["sudo", "tee", str(target)]
         run(
             command,

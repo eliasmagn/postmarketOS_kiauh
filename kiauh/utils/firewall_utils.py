@@ -20,6 +20,7 @@ from utils.input_utils import (
     get_selection_input,
     get_string_input,
 )
+from utils.sudo_session import ensure_sudo_session
 
 
 NFT_CHAIN_CMD = ["sudo", "nft", "list", "chain", "inet", "filter", "input"]
@@ -251,6 +252,7 @@ def _add_rule(
     command.extend(["tcp", "dport", str(port), "accept"])
 
     try:
+        ensure_sudo_session()
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as exc:
         Logger.print_error(
@@ -265,6 +267,7 @@ def _add_rule(
 
 def _list_input_chain() -> Optional[str]:
     try:
+        ensure_sudo_session()
         result = run(NFT_CHAIN_CMD, stdout=PIPE, stderr=PIPE, text=True, check=True)
         return result.stdout
     except CalledProcessError as exc:

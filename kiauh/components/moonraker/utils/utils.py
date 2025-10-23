@@ -39,6 +39,7 @@ from utils.sys_utils import (
     has_package_equivalent,
     parse_packages_from_file,
 )
+from utils.sudo_session import ensure_sudo_session
 
 
 APK_UPDATE_WRAPPER = MODULE_PATH.joinpath("assets/apk-update-manager-wrapper.py")
@@ -96,6 +97,7 @@ def install_moonraker_packages() -> None:
 
 def _sudo_run(command: List[str], error_message: str) -> bool:
     try:
+        ensure_sudo_session()
         run(command, stderr=PIPE, stdout=DEVNULL, check=True)
     except CalledProcessError as exc:
         stderr = (exc.stderr or b"").decode().strip()

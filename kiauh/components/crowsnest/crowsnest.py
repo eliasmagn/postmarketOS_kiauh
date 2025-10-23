@@ -60,6 +60,7 @@ from utils.sys_utils import (
     parse_packages_from_file,
     remove_system_service,
 )
+from utils.sudo_session import ensure_sudo_session
 
 
 def install_crowsnest() -> None:
@@ -233,6 +234,7 @@ def _render_template(template: Path, replacements: dict[str, str]) -> str:
 
 
 def _write_root_file(target: Path, content: str) -> None:
+    ensure_sudo_session()
     run(
         ["sudo", "tee", target],
         input=content.encode(),
@@ -251,6 +253,7 @@ def _install_crowsnest_apk(init_system: InitSystem) -> None:
     _ensure_directories([CROWSNEST_CONFIG_DIR, CROWSNEST_LOG_DIR, CROWSNEST_ENV_DIR])
 
     Logger.print_status("Deploying crowsnest executable ...")
+    ensure_sudo_session()
     run(
         ["sudo", "install", "-m", "755", CROWSNEST_DIR.joinpath("crowsnest"), CROWSNEST_BIN_FILE],
         check=True,
@@ -365,6 +368,7 @@ def _ensure_video_group_membership() -> None:
         groups = group_check.stdout.split()
         if "video" not in groups:
             Logger.print_status(f"Adding user '{CURRENT_USER}' to group 'video' ...")
+            ensure_sudo_session()
             run(["sudo", "usermod", "-a", "-G", "video", CURRENT_USER], check=True)
             Logger.print_ok("User added to group 'video'.")
         else:
@@ -393,6 +397,7 @@ def _remove_crowsnest_apk(init_system: InitSystem) -> None:
     for path in (CROWSNEST_BIN_FILE, CROWSNEST_LOGROTATE_FILE):
         if path.exists():
             Logger.print_status(f"Removing {path} ...")
+            ensure_sudo_session()
             run(["sudo", "rm", "-f", path], check=True)
 
     if CROWSNEST_ENV_FILE.exists():

@@ -17,6 +17,7 @@ from core.types.color import Color
 from utils.common import check_install_dependencies
 from utils.input_utils import get_confirm, get_string_input
 from utils.sys_utils import InitSystem, cmd_sysctl_service, get_init_system
+from utils.sudo_session import ensure_sudo_session
 
 WIREGUARD_DIR = Path("/etc/wireguard")
 
@@ -193,6 +194,7 @@ def _derive_public_key(private_key: str) -> str:
 
 def _ensure_wireguard_directory() -> None:
     try:
+        ensure_sudo_session()
         run(["sudo", "mkdir", "-p", WIREGUARD_DIR.as_posix()], check=True)
     except CalledProcessError as error:
         Logger.print_error(f"Failed to create {WIREGUARD_DIR}: {error}")
@@ -206,6 +208,7 @@ def _backup_existing_config(config_path: Path) -> None:
     backup_path = config_path.with_suffix(config_path.suffix + f".{timestamp}.bak")
     try:
         Logger.print_status(f"Backing up existing configuration to {backup_path} ...")
+        ensure_sudo_session()
         run(
             [
                 "sudo",
@@ -266,6 +269,7 @@ def _write_wireguard_config(
         Logger.print_status(
             f"Writing WireGuard configuration for '{interface}' to {config_path} ..."
         )
+        ensure_sudo_session()
         run(
             ["sudo", "tee", config_path.as_posix()],
             input=content.encode(),
@@ -282,6 +286,7 @@ def _write_wireguard_config(
 def _set_config_permissions(config_path: Path) -> None:
     try:
         Logger.print_status("Setting strict permissions on the WireGuard config ...")
+        ensure_sudo_session()
         run(["sudo", "chmod", "600", config_path.as_posix()], check=True)
         Logger.print_ok("Permissions updated.")
     except CalledProcessError as error:

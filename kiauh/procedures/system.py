@@ -14,6 +14,7 @@ from core.logger import DialogType, Logger
 from utils.common import check_install_dependencies, get_current_date
 from utils.fs_utils import check_file_exist
 from utils.input_utils import get_confirm, get_string_input
+from utils.sudo_session import ensure_sudo_session
 
 
 def change_system_hostname() -> None:
@@ -68,6 +69,7 @@ def change_system_hostname() -> None:
         hosts_file = Path("/etc/hosts")
         if not check_file_exist(hosts_file, True):
             cmd = ["sudo", "touch", hosts_file.as_posix()]
+            ensure_sudo_session()
             run(cmd, stderr=PIPE, check=True)
         else:
             date_time = get_current_date()
@@ -79,12 +81,14 @@ def change_system_hostname() -> None:
                 hosts_file.as_posix(),
                 hosts_file_backup.as_posix(),
             ]
+            ensure_sudo_session()
             run(cmd, stderr=PIPE, check=True)
         Logger.print_ok()
 
         # call hostnamectl set-hostname <hostname>
         Logger.print_status(f"Setting hostname to '{hostname}' ...")
         cmd = ["sudo", "hostnamectl", "set-hostname", hostname]
+        ensure_sudo_session()
         run(cmd, stderr=PIPE, check=True)
         Logger.print_ok()
 
@@ -92,6 +96,7 @@ def change_system_hostname() -> None:
         Logger.print_status("Writing new hostname to /etc/hosts ...")
         stdin = f"127.0.0.1       {hostname}\n"
         cmd = ["sudo", "tee", "-a", hosts_file.as_posix()]
+        ensure_sudo_session()
         run(cmd, input=stdin.encode(), stderr=PIPE, stdout=PIPE, check=True)
         Logger.print_ok()
 
