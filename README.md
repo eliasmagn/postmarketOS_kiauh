@@ -145,6 +145,7 @@ cd ~ && git clone https://github.com/postmarketOS-community/postmarketos-kiauh.g
 ### 🔄 Update menu UX
 
 - Loading spinners now pause automatically whenever `sudo` needs your password or the package manager prints interactive output, so update checks no longer obscure the prompt behind the animation.
+- KIAUH now offers to cache your sudo credentials for the current session, refreshing the timestamp behind the scenes and clearing it when you exit so multi-step updates only prompt once.
 - Menu loading indicators now shut down safely even if they were never started, eliminating the `AttributeError` that previously appeared when a menu tried to stop a missing spinner.
 - Warning prompts across installers and extensions now route through the shared `Logger.print_warn` helper so the CLI surfaces consistent messaging.
 
@@ -424,6 +425,10 @@ changes!**
     - The helper now inspects `/etc/os-release` so Alpine/postmarketOS hosts always prefer `apk`, even when compatibility wrappers expose `apt-get`
 - During the use of this script you will be asked for your sudo password. There
   are several functions involved which need sudo privileges.
+    - When `sudo` is available KIAUH now asks whether it should cache your
+      credentials until you exit. Consenting keeps the password inside sudo's
+      timestamp cache and clears it automatically when you leave the helper so
+      long-running tasks only prompt once.
 
 <hr>
 

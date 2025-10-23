@@ -12,6 +12,7 @@ import sys
 from core.logger import Logger
 from core.menus.main_menu import MainMenu
 from core.settings.kiauh_settings import KiauhSettings
+from utils.sudo_session import SudoSession
 
 
 def ensure_encoding() -> None:
@@ -21,12 +22,16 @@ def ensure_encoding() -> None:
 
 
 def main() -> None:
+    sudo_session = SudoSession()
     try:
         KiauhSettings()
         ensure_encoding()
+        sudo_session.maybe_enable()
         MainMenu().run()
     except KeyboardInterrupt:
         Logger.print_ok("\nHappy printing!\n", prefix=False)
+    finally:
+        sudo_session.close()
 
 
 if __name__ == "__main__":
