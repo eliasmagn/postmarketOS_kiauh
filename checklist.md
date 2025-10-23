@@ -38,6 +38,7 @@
       input casing users prefer.
 - [x] Stream NGINX site templates with `sudo tee` so doas-backed systems can't drop the config between generation and placement.
 - [x] Provision `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` on Alpine-style hosts and add an include so multiple dashboards remain loadable without rewriting `nginx.conf`.
+- [x] Ensure the sites include helper seeds the resolved NGINX include directory before streaming `kiauh-sites.conf` so default configurations load the generated sites.
 - [x] Create the resolved NGINX `conf.d` directory before copying shared configs so Fluidd installs succeed on minimal images.
 - [x] Route warning messages through the shared `Logger.print_warn` helper to keep prompts consistent across installers and extensions.
 - [ ] Capture feedback from postmarketOS test runs and extend the compatibility matrix as needed.

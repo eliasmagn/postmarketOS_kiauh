@@ -303,6 +303,13 @@ def _ensure_nginx_sites_include() -> None:
     if _nginx_has_sites_include():
         return
 
+    try:
+        _ensure_nginx_confd()
+    except CalledProcessError:
+        # _ensure_nginx_confd already logged the failure; bubble up so the
+        # caller can abort before we attempt to write into a missing directory.
+        raise
+
     include_file = NGINX_CONFD.joinpath("kiauh-sites.conf")
     content = f"include {NGINX_SITES_ENABLED.as_posix()}/*;\n"
 
