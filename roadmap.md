@@ -33,6 +33,7 @@
 - ✅ Provide an apk-aware crowsnest deployment that renders config templates and installs an OpenRC service so Fluidd/Mainsail webcams stream on postmarketOS.
 - ✅ Offer optional WireGuard provisioning so remote access can ride an encrypted tunnel alongside the nftables automation.
 - ✅ Pause spinner-driven loading messages whenever sudo interactions are required so update prompts stay visible to the user.
+- ✅ Offer optional sudo credential caching so privileged actions only prompt once per KIAUH session and the timestamp is cleared on exit.
 - ✅ Harden spinner teardown so menus can safely dismiss loading indicators even when the animation never started.
 - ✅ Standardize warning logging through `Logger.print_warn` so attention messages read consistently across components.
 - ✅ Point the self-update routine at the postmarketOS community fork by default while keeping an escape hatch for personal forks via `KIAUH_REPO_URL`.
