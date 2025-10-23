@@ -347,6 +347,23 @@ def ensure_nginx_site_layout() -> None:
     _ensure_nginx_sites_include()
 
 
+def _ensure_nginx_confd() -> None:
+    """Ensure the nginx conf.d directory exists before writing configuration."""
+
+    if NGINX_CONFD.exists():
+        return
+
+    try:
+        Logger.print_status(f"Creating missing nginx directory {NGINX_CONFD} ...")
+        command = ["sudo", "install", "-d", "-m", "755", str(NGINX_CONFD)]
+        run(command, stderr=PIPE, check=True)
+        Logger.print_ok(f"Directory {NGINX_CONFD} created.")
+    except CalledProcessError as e:
+        log = f"Unable to create nginx directory: {e.stderr.decode()}"
+        Logger.print_error(log)
+        raise
+
+
 def copy_upstream_nginx_cfg() -> None:
     """
     Creates an upstream.conf in the detected NGINX configuration directory.
@@ -355,6 +372,7 @@ def copy_upstream_nginx_cfg() -> None:
     source = MODULE_PATH.joinpath("assets/upstreams.conf")
     target = NGINX_CONFD.joinpath("upstreams.conf")
     try:
+        _ensure_nginx_confd()
         command = ["sudo", "cp", source, target]
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as e:
@@ -371,10 +389,11 @@ def copy_common_vars_nginx_cfg() -> None:
     source = MODULE_PATH.joinpath("assets/common_vars.conf")
     target = NGINX_CONFD.joinpath("common_vars.conf")
     try:
+        _ensure_nginx_confd()
         command = ["sudo", "cp", source, target]
         run(command, stderr=PIPE, check=True)
     except CalledProcessError as e:
-        log = f"Unable to create upstreams.conf: {e.stderr.decode()}"
+        log = f"Unable to create common_vars.conf: {e.stderr.decode()}"
         Logger.print_error(log)
         raise
 

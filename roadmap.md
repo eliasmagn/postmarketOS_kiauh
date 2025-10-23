@@ -19,6 +19,7 @@
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.
 - ✅ Detect the active NGINX include directory (conf.d vs http.d) so Fluidd installs succeed on Alpine/postmarketOS hosts without manual intervention.
+- ✅ Create the resolved NGINX `conf.d` directory when missing so shared upstream/common config files can be installed on minimal images.
 - ✅ Fix web UI detection when generating example `printer.cfg` files so Mainsail/Fluidd include stanzas are added automatically after installation.
 - ✅ Pipe Fluidd's NGINX configuration into place with `sudo tee` so doas-backed installs no longer lose the template before it lands in `/etc/nginx`.
 - ✅ Provision missing `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` directories on Alpine-style hosts and insert an include so multiple dashboards can remain enabled without editing `nginx.conf` directly.
