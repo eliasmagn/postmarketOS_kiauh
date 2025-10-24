@@ -167,6 +167,7 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 ### 🌐 NGINX layout detection
 
 - Fluidd and other web front-ends now detect whether the host uses `/etc/nginx/conf.d/` or Alpine's `/etc/nginx/http.d/` include directory before copying support files. This prevents the Fluidd installer from failing on postmarketOS devices where `conf.d` is absent and keeps the generated configuration inside the directory that NGINX already loads.
+- The resolver now inspects `/etc/nginx/nginx.conf` first, so when both include directories exist it chooses the one nginx actually loads instead of defaulting to `/etc/nginx/conf.d/` and leaving the new sites ignored.
 - When neither include directory exists—common on freshly provisioned postmarketOS images—the installer now creates `/etc/nginx/conf.d` before writing `upstreams.conf` and `common_vars.conf`, so Fluidd deployments no longer abort with a missing-path error.
 - When `/etc/nginx/sites-available` or `/etc/nginx/sites-enabled` is missing—as on stock Alpine images—the installer provisions both directories with `sudo install -d` and drops a `kiauh-sites.conf` include into the detected NGINX include directory so multiple dashboards (Mainsail, Fluidd, PrettyGCode, etc.) can coexist without rewriting `nginx.conf`.
 - The `kiauh-sites.conf` helper now seeds the resolved include directory before writing so stock nginx configurations load the generated sites even when `conf.d`/`http.d` was absent beforehand.

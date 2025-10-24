@@ -28,12 +28,25 @@ NGINX_SITES_ENABLED = Path("/etc/nginx/sites-enabled")
 
 
 def _resolve_nginx_conf_dir() -> Path:
-    """Return the NGINX conf.d directory used on the current system."""
+    """Return the NGINX include directory actually loaded by nginx."""
 
     candidate_dirs = (Path("/etc/nginx/conf.d"), Path("/etc/nginx/http.d"))
+    nginx_conf = Path("/etc/nginx/nginx.conf")
+
+    if nginx_conf.exists():
+        try:
+            config_text = nginx_conf.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            config_text = ""
+
+        for candidate in candidate_dirs:
+            if candidate.as_posix() in config_text:
+                return candidate
+
     for candidate in candidate_dirs:
         if candidate.exists():
             return candidate
+
     return candidate_dirs[0]
 
 

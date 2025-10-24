@@ -31,6 +31,7 @@ The project focuses on:
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories or the absence of Debian-style site folders—so web interfaces install without manual path fixes.
 - Pre-provisioning `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` when they are missing and streaming generated site definitions directly into place with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—and proactively creating missing `conf.d` targets—then seeding them before writing the `kiauh-sites.conf` drop-in—so stock nginx configurations immediately load the generated sites without manual path fixes.
+- Inspecting `/etc/nginx/nginx.conf` to discover which include directory (`conf.d` or `http.d`) the active configuration loads when both exist so generated drop-ins land where nginx actually reads them.
 - Streaming generated NGINX site definitions directly into privileged paths with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
 - Ensuring generated printer configuration templates automatically link the installed web UIs (Mainsail, Fluidd, etc.) so fresh Klipper instances keep their dashboards reachable without manual edits.
 - Falling back to sane defaults when expected NGINX site stanzas are absent, keeping menu flows responsive instead of crashing on missing configs.
