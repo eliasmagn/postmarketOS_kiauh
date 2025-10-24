@@ -31,6 +31,7 @@
 - ✅ Harden NGINX port detection so missing site configs fall back to the stored defaults instead of aborting the installer menus.
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
 - ✅ Handle Moonraker's policykit helper on BusyBox-based postmarketOS installs by auto-installing GNU `grep` when `grep -P` is unavailable and retrying the rule setup.
+- ✅ Retry Moonraker's policykit helper after authentication failures so doas-backed sudo shims receive a second password prompt before troubleshooting BusyBox limitations.
 - ✅ Ship an apt-compatible Moonraker update-manager drop-in on apk-based systems so the Update Manager works without PackageKit while keeping the policykit helper intact and warning-free.
 - ✅ Offer guided nftables allow-rule prompts for Moonraker and web UIs with selectable network scopes on nftables-enabled hosts.
 - ✅ Add explicit fallback messaging for missing nftables input chains so users know to reference the postmarketOS firewall documentation before adjusting rules manually.

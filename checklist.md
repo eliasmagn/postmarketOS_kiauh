@@ -31,6 +31,7 @@
 - [x] Detect NGINX configuration directory variants so web UIs install cleanly on Alpine/postmarketOS hosts.
 - [x] Ensure freshly generated `printer.cfg` examples include the installed Mainsail/Fluidd configs by correctly detecting existing web UI directories.
 - [x] Detect missing `grep -P` support on BusyBox-based systems, install GNU `grep`, and retry the Moonraker policykit helper automatically.
+- [x] Retry Moonraker's policykit helper after authentication failures so doas-backed sudo shims can prompt again instead of misdiagnosing the error as a missing GNU `grep`.
 - [x] Provide an apt-compatible Moonraker Update Manager drop-in for apk hosts so system updates keep working without PackageKit warnings.
 - [x] Detect nftables firewalls and offer guided allow-rule creation for Moonraker and web UI ports with selectable network scopes.
 - [x] Add fallback messaging when the default nftables input chain is missing, linking to the postmarketOS firewall guide for manual configuration steps.
