@@ -22,7 +22,7 @@
 - ✅ Stage the Wayland preset helper after the backend selection so X11-first installs progress without unrelated prompts.
 - ✅ Trim the KlipperScreen dependency footprint by default and prompt before installing optional extras.
 - ✅ Remove forced reboots from KlipperScreen's NetworkManager install step and replace them with manual reminders for safer unattended runs.
-- ✅ Detect the active NGINX include directory (conf.d vs http.d) so Fluidd installs succeed on Alpine/postmarketOS hosts without manual intervention.
+- ✅ Detect the active NGINX include directory by inspecting `/etc/nginx/nginx.conf` so Fluidd installs succeed on Alpine/postmarketOS hosts even when both `conf.d` and `http.d` exist.
 - ✅ Create the resolved NGINX `conf.d` directory when missing so shared upstream/common config files can be installed on minimal images.
 - ✅ Ensure the sites include helper seeds the detected include directory before streaming `kiauh-sites.conf` so default nginx loads the generated dashboards.
 - ✅ Fix web UI detection when generating example `printer.cfg` files so Mainsail/Fluidd include stanzas are added automatically after installation.
