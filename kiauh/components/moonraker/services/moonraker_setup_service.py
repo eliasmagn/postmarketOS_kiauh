@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from copy import copy
+from enum import Enum, auto
 from subprocess import DEVNULL, PIPE, CalledProcessError, run
 from typing import List
 
@@ -72,6 +73,13 @@ from utils.sys_utils import (
     install_system_packages,
     unit_file_exists,
 )
+
+
+class PolkitScriptResult(Enum):
+    SUCCESS = auto()
+    BUSYBOX_GREP = auto()
+    AUTH_FAILED = auto()
+    FAILURE = auto()
 
 
 # noinspection PyMethodMayBeStatic
@@ -375,7 +383,15 @@ class MoonrakerSetupService:
             return
 
         try:
-            if self.__run_polkit_script():
+            polkit_result = self.__run_polkit_script()
+            if polkit_result == PolkitScriptResult.AUTH_FAILED:
+                Logger.print_warn("Authentication failed. Please try again.")
+                polkit_result = self.__run_polkit_script()
+                if polkit_result == PolkitScriptResult.AUTH_FAILED:
+                    Logger.print_error("Installing Moonraker policykit rules failed!")
+                    return
+
+            if polkit_result == PolkitScriptResult.SUCCESS:
                 return
 
             Logger.print_info(
@@ -386,7 +402,15 @@ class MoonrakerSetupService:
                 return
 
             Logger.print_status("Retrying Moonraker policykit rule installation ...")
-            if self.__run_polkit_script():
+            polkit_result = self.__run_polkit_script()
+            if polkit_result == PolkitScriptResult.AUTH_FAILED:
+                Logger.print_warn("Authentication failed. Please try again.")
+                polkit_result = self.__run_polkit_script()
+                if polkit_result == PolkitScriptResult.AUTH_FAILED:
+                    Logger.print_error("Installing Moonraker policykit rules failed!")
+                    return
+
+            if polkit_result == PolkitScriptResult.SUCCESS:
                 return
 
             Logger.print_error("Installing Moonraker policykit rules failed!")
@@ -396,7 +420,7 @@ class MoonrakerSetupService:
             )
             Logger.print_error(log)
 
-    def __run_polkit_script(self) -> bool:
+    def __run_polkit_script(self) -> PolkitScriptResult:
         command = [POLKIT_SCRIPT, "--disable-systemctl"]
         result = run(
             command,
@@ -405,20 +429,32 @@ class MoonrakerSetupService:
             text=True,
         )
         stderr_output = (result.stderr or "").strip()
+        stderr_lower = stderr_output.lower()
 
         if result.returncode == 0 and not stderr_output:
             Logger.print_ok("Moonraker policykit rules successfully installed!")
-            return True
+            return PolkitScriptResult.SUCCESS
 
         if "unrecognized option: P" in stderr_output or "BusyBox" in stderr_output:
             Logger.print_warn(
                 "BusyBox grep detected without '-P' support; policykit install requires GNU grep."
             )
-            return False
+            return PolkitScriptResult.BUSYBOX_GREP
+
+        if any(
+            phrase in stderr_lower
+            for phrase in (
+                "authentication failed",
+                "authentication failure",
+                "sorry, try again",
+                "a password is required",
+            )
+        ):
+            return PolkitScriptResult.AUTH_FAILED
 
         if stderr_output:
             Logger.print_error(stderr_output, False)
-        return False
+        return PolkitScriptResult.FAILURE
 
     def __ensure_gnu_grep(self) -> bool:
         manager = get_package_manager()

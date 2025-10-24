@@ -17,6 +17,7 @@ The project focuses on:
 - Steering the self-update routine toward the postmarketOS community fork by default while still allowing personal forks to override the `origin` remote through `KIAUH_REPO_URL`.
 - Normalizing Moonraker's Debian-centric dependency manifests so apk-based systems transparently reuse and translate the same requirements without aborting the install flow.
 - Detecting BusyBox-specific tool limitations (for example, the absence of `grep -P`) and automatically installing the missing GNU utilities so Moonraker's policykit configuration succeeds on postmarketOS.
+- Retrying Moonraker's policykit helper when authentication fails so doas-backed hosts can re-enter credentials even if the sudo cache was primed earlier in the session.
 - Shipping an apt-compatible Moonraker update-manager drop-in for apk-based installs so the Update Manager keeps working without PackageKit while the policykit helper remains intact.
 - Replacing upstream-only installers with apk-aware shims when necessary so features like KlipperScreen's X11 session remain first-class citizens alongside the newer Wayland presets.
 - Ensuring CLI feedback remains accessible by pausing spinner-driven status messages whenever privileged prompts appear, keeping sudo password requests visible during update flows.
