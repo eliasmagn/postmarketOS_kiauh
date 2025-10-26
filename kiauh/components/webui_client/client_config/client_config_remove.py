@@ -8,7 +8,9 @@
 # ======================================================================= #
 
 
-from typing import List
+import shlex
+from pathlib import Path
+from typing import List, Optional
 
 from components.klipper.klipper import Klipper
 from components.moonraker.moonraker import Moonraker
@@ -33,6 +35,10 @@ def run_client_config_removal(
         color=Color.GREEN,
     )
     Logger.print_status(f"Removing {client_config.display_name} ...")
+
+    completion_msg = remove_cfg_symlink(
+        client_config, completion_msg, kl_instances
+    )
     if run_remove_routines(client_config.config_dir):
         completion_msg.text.append(f"● {client_config.display_name} removed")
 
@@ -56,24 +62,100 @@ def run_client_config_removal(
     return completion_msg
 
 
-def remove_cfg_symlink(client_config: BaseWebClientConfig, message: Message) -> Message:
-    instances: List[Klipper] = get_instances(Klipper)
-    kl_instances = []
+def remove_cfg_symlink(
+    client_config: BaseWebClientConfig,
+    message: Message,
+    kl_instances: Optional[List[Klipper]] = None,
+) -> Message:
+    instances: List[Klipper] = kl_instances or get_instances(Klipper)
+    removed_from: List[Klipper] = []
     for instance in instances:
         cfg = instance.base.cfg_dir.joinpath(client_config.config_filename)
         if run_remove_routines(cfg):
-            kl_instances.append(instance)
+            removed_from.append(instance)
     text = f"{client_config.display_name} removed from instance"
-    return update_msg(kl_instances, message, text)
+    return update_msg(removed_from, message, text)
 
 
 def remove_printer_config_section(
     message: Message, client_config: BaseWebClientConfig, kl_instances: List[Klipper]
 ) -> Message:
     kl_section = client_config.config_section
-    kl_instances = remove_config_section(kl_section, kl_instances)
+    removed_sections = remove_config_section(kl_section, kl_instances)
     text = f"Klipper config section '{kl_section}' removed for instance"
-    return update_msg(kl_instances, message, text)
+    message = update_msg(removed_sections, message, text)
+
+    disabled_includes = disable_plain_include(
+        client_config.config_filename, kl_instances
+    )
+    text = (
+        f"Inline include for '{client_config.config_filename}' disabled in instance"
+    )
+    return update_msg(disabled_includes, message, text)
+
+
+def disable_plain_include(
+    filename: str, instances: List[Klipper]
+) -> List[Klipper]:
+    affected: List[Klipper] = []
+    for instance in instances:
+        cfg_file = instance.cfg_file
+        if not cfg_file.exists():
+            Logger.print_warn(f"'{cfg_file}' not found!")
+            continue
+
+        try:
+            lines = cfg_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        except OSError as e:
+            Logger.print_error(f"Unable to read '{cfg_file}':\n{e}")
+            continue
+
+        changed = False
+        updated: List[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("#", ";")):
+                updated.append(line)
+                continue
+
+            try:
+                tokens = shlex.split(stripped, comments=True, posix=True)
+            except ValueError:
+                updated.append(line)
+                continue
+
+            if len(tokens) < 2 or tokens[0].lower() != "include":
+                updated.append(line)
+                continue
+
+            include_target = Path(tokens[1]).name
+            if include_target != filename:
+                updated.append(line)
+                continue
+
+            leading = line[: len(line) - len(line.lstrip())]
+            body = line.lstrip().rstrip("\n")
+            newline = "\n" if line.endswith("\n") else ""
+            updated.append(
+                f"{leading}# {body}  # disabled by KIAUH{newline}"
+            )
+            changed = True
+
+        if not changed:
+            continue
+
+        Logger.print_status(
+            f"Disable inline include '{filename}' in '{cfg_file}' ..."
+        )
+        try:
+            cfg_file.write_text("".join(updated), encoding="utf-8")
+        except OSError as e:
+            Logger.print_error(f"Unable to update '{cfg_file}':\n{e}")
+            continue
+        Logger.print_ok("OK!")
+        affected.append(instance)
+
+    return affected
 
 
 def remove_moonraker_config_section(

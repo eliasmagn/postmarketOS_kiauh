@@ -336,8 +336,40 @@ def _ensure_nginx_sites_include() -> None:
         raise
 
 
+def ensure_nginx_runtime_dirs() -> None:
+    """Ensure nginx runtime directories exist before managing configs."""
+
+    required_dirs = (
+        Path("/var/log/nginx"),
+        Path("/var/lib/nginx"),
+        Path("/var/lib/nginx/logs"),
+        Path("/run/nginx"),
+    )
+
+    for directory in required_dirs:
+        if directory.exists():
+            continue
+
+        try:
+            Logger.print_status(f"Creating missing nginx directory {directory} ...")
+            ensure_sudo_session()
+            command = ["sudo", "install", "-d", "-m", "755", str(directory)]
+            run(command, stderr=PIPE, check=True)
+            Logger.print_ok(f"Directory {directory} created.")
+        except CalledProcessError as e:
+            log = (
+                f"Unable to create nginx directory {directory}: {e.stderr.decode()}"
+                if e.stderr
+                else f"Unable to create nginx directory {directory}: {e}"
+            )
+            Logger.print_error(log)
+            raise
+
+
 def ensure_nginx_site_layout() -> None:
     """Ensure Debian-style nginx site directories exist and are loaded."""
+
+    ensure_nginx_runtime_dirs()
 
     try:
         for directory in (NGINX_SITES_AVAILABLE, NGINX_SITES_ENABLED):

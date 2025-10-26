@@ -26,7 +26,9 @@
 - ✅ Create the resolved NGINX `conf.d` directory when missing so shared upstream/common config files can be installed on minimal images.
 - ✅ Ensure the sites include helper seeds the detected include directory before streaming `kiauh-sites.conf` so default nginx loads the generated dashboards.
 - ✅ Fix web UI detection when generating example `printer.cfg` files so Mainsail/Fluidd include stanzas are added automatically after installation.
+- ✅ Remove Fluidd config symlinks and comment out bare `include fluidd.cfg` lines during uninstall so Klipper no longer fails to load references to missing Fluidd configs before the replacement dashboard is installed.
 - ✅ Pipe Fluidd's NGINX configuration into place with `sudo tee` so doas-backed installs no longer lose the template before it lands in `/etc/nginx`.
+- ✅ Provision nginx runtime directories like `/var/log/nginx`, `/var/lib/nginx/logs`, and `/run/nginx` when they are missing so nginx stops failing configuration tests on minimal postmarketOS images.
 - ✅ Provision missing `/etc/nginx/sites-available` and `/etc/nginx/sites-enabled` directories on Alpine-style hosts and insert an include so multiple dashboards can remain enabled without editing `nginx.conf` directly.
 - ✅ Harden NGINX port detection so missing site configs fall back to the stored defaults instead of aborting the installer menus.
 - ✅ Reuse Moonraker's Debian dependency manifest on apk-based systems while translating package names so installations no longer abort when the JSON lacks an Alpine entry.
