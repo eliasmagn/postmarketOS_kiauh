@@ -34,7 +34,9 @@ The project focuses on:
 - Accounting for distribution-specific filesystem layouts—like alternative NGINX configuration directories—and proactively creating missing `conf.d` targets—then seeding them before writing the `kiauh-sites.conf` drop-in—so stock nginx configurations immediately load the generated sites without manual path fixes.
 - Inspecting `/etc/nginx/nginx.conf` to discover which include directory (`conf.d` or `http.d`) the active configuration loads when both exist so generated drop-ins land where nginx actually reads them.
 - Streaming generated NGINX site definitions directly into privileged paths with `sudo tee` so doas-backed systems never lose the template to tmpdir cleanup before it lands in `/etc/nginx`.
+- Pre-provisioning nginx runtime directories like `/var/log/nginx`, `/var/lib/nginx/logs`, and `/run/nginx` when they are missing so configuration tests stop failing on images that omit them by default.
 - Ensuring generated printer configuration templates automatically link the installed web UIs (Mainsail, Fluidd, etc.) so fresh Klipper instances keep their dashboards reachable without manual edits.
+- Scrubbing stale Fluidd include directives—including bare `include fluidd.cfg` lines—and symlinks from Klipper configs whenever the companion files are removed so service restarts no longer fail on broken dashboard references.
 - Falling back to sane defaults when expected NGINX site stanzas are absent, keeping menu flows responsive instead of crashing on missing configs.
 - Detecting nftables-based firewalls and layering guided prompts that open Moonraker and Fluidd ports only for the networks you approve, keeping phones and tablets reachable without exposing them broadly by default.
 - Supplying actionable fallback guidance when the default nftables input chain is missing so users know to consult the postmarketOS firewall documentation before proceeding.

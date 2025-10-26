@@ -174,10 +174,12 @@ On OpenRC-based systems the helper transparently switches to `rc-service` and
 - The helper logs the resolved directory so you can confirm which include path was used if you need to hand-inspect the configuration later.
 - When an expected site definition is missing entirely, the menu falls back to the saved default port instead of crashing so you can still reinstall or reconfigure the client.
 - Fluidd's NGINX site definition now streams straight into place with `sudo tee`, sidestepping the tmpfile rename that `doas`-backed hosts occasionally lost before it reached `/etc/nginx`.
+- The installer now provisions `/var/log/nginx`, `/var/lib/nginx/logs`, and `/run/nginx` on demand so nginx no longer fails its configuration tests on postmarketOS images that omit the runtime directories.
 
 ### 🧩 Web UI config hand-off
 
 - When KIAUH seeds a fresh `printer.cfg` for new Klipper instances it now re-checks for installed Mainsail/Fluidd directories and automatically adds the matching `include` statements. The generated example therefore keeps your dashboards reachable immediately after installation, even on systems that install the web UIs before Klipper.
+- Uninstalling Fluidd's configuration through the removal menu now deletes the `fluidd.cfg` symlinks and comments out legacy `include fluidd.cfg` directives before pruning the git checkout and Moonraker stanza, preventing Klipper from erroring out on references that point at missing files.
 
 ### 📹 Crowsnest webcam integration
 
